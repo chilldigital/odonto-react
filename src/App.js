@@ -1,0 +1,698 @@
+import React, { useState, useCallback, useMemo } from 'react';
+import { Calendar, Users, BarChart3, Plus, Search, Eye, Phone, MapPin, Mail, Upload, X, Menu } from 'lucide-react';
+import './App.css';
+
+// Datos de ejemplo que serán reemplazados por los endpoints de n8n
+const mockData = {
+  stats: {
+    turnosHoy: 2,
+    turnosSemana: 9,
+    totalPacientes: 27
+  },
+  proximosTurnos: [
+    {
+      fecha: "Viernes 22 de Agosto",
+      hora: "15:00 hs",
+      paciente: "Benjamin Torres Lemos",
+      tipo: "Consulta General"
+    },
+    {
+      fecha: "Viernes 22 de Agosto", 
+      hora: "15:30 hs",
+      paciente: "Agustin Corbalan",
+      tipo: "Arreglo de Caries"
+    },
+    {
+      fecha: "Martes 26 de Agosto",
+      hora: "10:45 hs", 
+      paciente: "Esteban Alvarez Farhat",
+      tipo: "Extracción"
+    }
+  ],
+  pacientes: [
+    {
+      id: 1,
+      nombre: "Benjamin Torres Lemos",
+      obraSocial: "OSDE", 
+      telefono: "38161234567",
+      historiaClinica: "Abrir",
+      ultimaVisita: "12/08/2025"
+    },
+    {
+      id: 2,
+      nombre: "Agustin Corbalan",
+      obraSocial: "Swiss Medical",
+      telefono: "1136314341", 
+      historiaClinica: "Abrir",
+      ultimaVisita: "02/07/2025"
+    },
+    {
+      id: 3,
+      nombre: "Esteban Alvarez Farhat",
+      obraSocial: "Medicus",
+      telefono: "38161827364",
+      historiaClinica: "Abrir", 
+      ultimaVisita: "24/02/2025"
+    },
+    {
+      id: 4,
+      nombre: "Facundo Salado",
+      obraSocial: "Medifé",
+      telefono: "38169274658",
+      historiaClinica: "Abrir",
+      ultimaVisita: "16/06/2025"
+    }
+  ]
+};
+
+// Componente separado para el buscador optimizado
+const SearchInput = React.memo(({ value, onChange, placeholder }) => {
+  return (
+    <div className="relative">
+      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+      <input
+        type="text"
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 w-full sm:w-auto"
+        autoComplete="off"
+      />
+    </div>
+  );
+});
+
+// Componente separado para la tabla de pacientes
+const PatientTable = React.memo(({ patients }) => {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-full">
+        <thead className="bg-gray-50 border-b">
+          <tr>
+            <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Nombre</th>
+            <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Obra Social</th>
+            <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Historia Clínica</th>
+            <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Última Visita</th>
+            <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {patients.map((paciente) => (
+            <tr key={paciente.id} className="border-b hover:bg-gray-50">
+              <td className="p-3 lg:p-4 text-sm text-gray-900 whitespace-nowrap">{paciente.nombre}</td>
+              <td className="p-3 lg:p-4 text-sm text-blue-600 whitespace-nowrap">{paciente.obraSocial}</td>
+              <td className="p-3 lg:p-4 text-sm text-teal-600 whitespace-nowrap">{paciente.historiaClinica}</td>
+              <td className="p-3 lg:p-4 text-sm text-gray-900 whitespace-nowrap">{paciente.ultimaVisita}</td>
+              <td className="p-3 lg:p-4">
+                <button className="text-gray-400 hover:text-gray-600">
+                  <Eye size={16} />
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+});
+
+const Dashboard = () => {
+  const [currentView, setCurrentView] = useState('dashboard');
+  const [showAddPatientModal, setShowAddPatientModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(''); // Para la página completa de Pacientes
+  const [dashboardSearchTerm, setDashboardSearchTerm] = useState(''); // Para el dashboard principal
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Sidebar Component - RESPONSIVE
+  const Sidebar = () => (
+    <>
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      
+      {/* Sidebar */}
+      <div className={`
+        fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white h-screen shadow-lg transform transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        <div className="px-6 py-4 border-b" style={{ height: '73px', display: 'flex', alignItems: 'center' }}>
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+              <span className="text-amber-600 font-semibold text-sm">🦷</span>
+            </div>
+            <span className="text-gray-800 font-semibold text-base">Od. Mercedes Pindar</span>
+          </div>
+          {/* Close button for mobile */}
+          <button 
+            onClick={() => setSidebarOpen(false)}
+            className="ml-auto lg:hidden p-2"
+          >
+            <X size={20} />
+          </button>
+        </div>
+      
+      <nav className="mt-6">
+        <ul className="space-y-2 px-4">
+          <li>
+            <button
+              onClick={() => {
+                setCurrentView('dashboard');
+                setSidebarOpen(false);
+              }}
+              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                currentView === 'dashboard' 
+                  ? 'bg-teal-50 text-teal-600 border-l-4 border-teal-600' 
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <BarChart3 size={20} />
+              <span>Dashboard</span>
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={() => {
+                setCurrentView('turnos');
+                setSidebarOpen(false);
+              }}
+              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                currentView === 'turnos'
+                  ? 'bg-teal-50 text-teal-600 border-l-4 border-teal-600'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Calendar size={20} />
+              <span>Turnos</span>
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={() => {
+                setCurrentView('pacientes');
+                setSidebarOpen(false);
+              }}
+              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                currentView === 'pacientes'
+                  ? 'bg-teal-50 text-teal-600 border-l-4 border-teal-600'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Users size={20} />
+              <span>Pacientes</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
+      
+      <div className="absolute bottom-4 left-4">
+        <button className="flex items-center space-x-2 text-gray-600 text-sm">
+          <span className="w-4 h-4 bg-gray-400 rounded-full flex items-center justify-center text-white text-xs">?</span>
+          <span>Soporte</span>
+        </button>
+      </div>
+    </div>
+    </>
+  );
+
+  // Header Component - RESPONSIVE
+  const Header = ({ title }) => (
+    <div className="bg-white border-b px-4 lg:px-8 py-4 flex justify-between items-center">
+      <div className="flex items-center space-x-4">
+        {/* Mobile menu button */}
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="lg:hidden p-2 text-gray-600 hover:text-gray-900"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <h1 className="text-xl lg:text-2xl font-semibold text-gray-800">{title}</h1>
+      </div>
+      <div className="flex items-center space-x-4">
+        <div className="w-8 h-8 lg:w-10 lg:h-10 bg-orange-100 rounded-full flex items-center justify-center">
+          <div className="w-6 h-6 lg:w-8 lg:h-8 bg-orange-200 rounded-full"></div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Stats Cards Component
+  const StatsCard = ({ title, value, color }) => (
+    <div className="bg-white p-6 rounded-lg shadow-sm border">
+      <div className="flex justify-between items-start">
+        <div>
+          <p className="text-gray-500 text-sm mb-1">{title}</p>
+          <p className={`text-3xl font-bold ${color}`}>{value}</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Dashboard View - COMPLETAMENTE OPTIMIZADO
+  const DashboardView = () => {
+    // Optimizar el filtrado con useMemo
+    const filteredPacientes = useMemo(() => {
+      if (!dashboardSearchTerm.trim()) return mockData.pacientes.slice(0, 4);
+      return mockData.pacientes.filter(paciente =>
+        paciente.nombre.toLowerCase().includes(dashboardSearchTerm.toLowerCase())
+      ).slice(0, 4);
+    }, [dashboardSearchTerm]);
+
+    // Optimizar el handler con useCallback
+    const handleSearchChange = useCallback((e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDashboardSearchTerm(e.target.value);
+    }, [setDashboardSearchTerm]);
+
+    const handleAddPatient = useCallback(() => {
+      setShowAddPatientModal(true);
+    }, [setShowAddPatientModal]);
+
+    return (
+      <div className="p-4 lg:p-8 bg-gray-50 min-h-screen">
+        {/* Stats Cards - RESPONSIVE */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
+          <StatsCard title="Turnos de hoy" value={mockData.stats.turnosHoy} color="text-teal-600" />
+          <StatsCard title="Turnos de la semana" value={mockData.stats.turnosSemana} color="text-gray-900" />
+          <StatsCard title="Pacientes" value={mockData.stats.totalPacientes} color="text-gray-900" />
+        </div>
+
+        {/* Content - RESPONSIVE */}
+        <div className="space-y-6 lg:space-y-8">
+          {/* Próximos Turnos */}
+          <div className="bg-white rounded-lg shadow-sm border">
+            <div className="p-4 lg:p-6 border-b">
+              <h2 className="text-lg font-semibold text-gray-800">Próximos Turnos</h2>
+            </div>
+            <div className="p-4 lg:p-6">
+              <div className="space-y-4">
+                {mockData.proximosTurnos.map((turno, index) => (
+                  <div key={`turno-${index}`} className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 py-3 border-b border-gray-100 last:border-b-0">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-3 h-3 bg-teal-500 rounded-full flex-shrink-0"></div>
+                      <div>
+                        <p className="text-sm text-gray-500">{turno.fecha}</p>
+                        <p className="text-sm text-gray-500">{turno.hora}</p>
+                      </div>
+                    </div>
+                    <div className="flex-1 sm:ml-4">
+                      <p className="font-medium text-gray-900">{turno.paciente}</p>
+                      <p className="text-sm text-gray-500">{turno.tipo}</p>
+                    </div>
+                    <button className="text-gray-400 hover:text-gray-600 self-start sm:self-center">
+                      <Eye size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Pacientes Preview - COMPLETAMENTE OPTIMIZADO */}
+          <div className="bg-white rounded-lg shadow-sm border">
+            <div className="p-4 lg:p-6 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
+              <h2 className="text-lg font-semibold text-gray-800">Pacientes</h2>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
+                <SearchInput
+                  value={dashboardSearchTerm}
+                  onChange={handleSearchChange}
+                  placeholder="Buscar paciente"
+                />
+                <button 
+                  onClick={handleAddPatient}
+                  className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors w-full sm:w-auto"
+                >
+                  Agregar
+                </button>
+              </div>
+            </div>
+            <PatientTable patients={filteredPacientes} />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Pacientes View - RESPONSIVE
+  const PacientesView = () => {
+    const filteredPacientes = mockData.pacientes.filter(paciente =>
+      paciente.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+      <div className="p-4 lg:p-8 bg-gray-50 min-h-screen">
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="p-4 lg:p-6 border-b flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
+            <h2 className="text-lg font-semibold text-gray-800">Pacientes</h2>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                <input
+                  type="text"
+                  placeholder="Buscar paciente"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 w-full sm:w-auto"
+                />
+              </div>
+              <button 
+                onClick={() => setShowAddPatientModal(true)}
+                className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors w-full sm:w-auto"
+              >
+                Agregar
+              </button>
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">
+                    <input type="checkbox" className="mr-3" />
+                    Nombre
+                  </th>
+                  <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Obra Social</th>
+                  <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Teléfono</th>
+                  <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Historia Clínica</th>
+                  <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Última Visita</th>
+                  <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array(16).fill(null).map((_, index) => {
+                  const paciente = filteredPacientes[index % filteredPacientes.length];
+                  return (
+                    <tr key={`${paciente.id}-${index}`} className="border-b hover:bg-gray-50">
+                      <td className="p-3 lg:p-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <input type="checkbox" className="mr-3" />
+                          <span className="text-sm text-gray-900">{paciente.nombre}</span>
+                        </div>
+                      </td>
+                      <td className="p-3 lg:p-4 text-sm text-blue-600 whitespace-nowrap">{paciente.obraSocial}</td>
+                      <td className="p-3 lg:p-4 text-sm text-gray-900 whitespace-nowrap">{paciente.telefono}</td>
+                      <td className="p-3 lg:p-4 text-sm text-teal-600 whitespace-nowrap">{paciente.historiaClinica}</td>
+                      <td className="p-3 lg:p-4 text-sm text-gray-900 whitespace-nowrap">{paciente.ultimaVisita}</td>
+                      <td className="p-3 lg:p-4">
+                        <button className="text-gray-400 hover:text-gray-600">
+                          <Eye size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Turnos View - RESPONSIVE
+  const TurnosView = () => {
+    const days = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+    const dates = [17, 18, 19, 20, 21, 22, 23];
+    const hours = ['5 AM', '6 AM', '7 AM', '8 AM', '9 AM', '10 AM', '11 AM', '12 PM', '1 PM', '2 PM', '3 PM', '4 PM'];
+
+    return (
+      <div className="p-4 lg:p-8 bg-gray-50 min-h-screen">
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="p-4 lg:p-6 border-b">
+            <h2 className="text-lg font-semibold text-gray-800">Calendario</h2>
+          </div>
+          
+          <div className="p-4 lg:p-6">
+            {/* Mobile Calendar View */}
+            <div className="lg:hidden space-y-4">
+              {mockData.proximosTurnos.map((turno, index) => (
+                <div key={index} className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="font-medium text-gray-900">{turno.paciente}</p>
+                      <p className="text-sm text-gray-500">{turno.tipo}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-teal-600">{turno.hora}</p>
+                      <p className="text-xs text-gray-500">{turno.fecha}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Calendar View */}
+            <div className="hidden lg:block overflow-x-auto">
+              <div className="grid grid-cols-8 gap-0 border border-gray-200 rounded-lg overflow-hidden min-w-full">
+                {/* Header with days */}
+                <div className="bg-gray-50 p-3 text-center font-medium text-xs text-gray-600 border-r">GMT-03</div>
+                {days.map((day, index) => (
+                  <div key={day} className={`bg-gray-50 p-3 text-center border-r ${index === 5 ? 'bg-blue-50' : ''}`}>
+                    <div className="text-xs text-gray-600 mb-1">{day}</div>
+                    <div className={`text-lg font-semibold ${index === 5 ? 'bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center mx-auto' : 'text-gray-900'}`}>
+                      {dates[index]}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Time slots */}
+                {hours.map((hour, hourIndex) => (
+                  <React.Fragment key={hour}>
+                    <div className="bg-gray-50 p-3 text-xs text-gray-600 border-r border-t text-center">
+                      {hour}
+                    </div>
+                    {days.map((_, dayIndex) => (
+                      <div key={`${hour}-${dayIndex}`} className="border-r border-t p-1 h-16 relative">
+                        {/* Ejemplo de citas programadas */}
+                        {dayIndex >= 1 && dayIndex <= 5 && hourIndex >= 2 && hourIndex <= 3 && (
+                          <div className={`absolute inset-1 ${hourIndex === 2 ? 'bg-teal-500' : hourIndex === 3 ? 'bg-blue-500' : 'bg-yellow-500'} text-white text-xs p-1 rounded flex flex-col justify-center`}>
+                            {hourIndex === 2 && <span>Ocupado<br />7:30 - 9am</span>}
+                            {hourIndex === 3 && dayIndex < 4 && <span>Reunión<br />10:30-11am</span>}
+                            {hourIndex === 3 && dayIndex >= 4 && <span>Llamada 30 min</span>}
+                          </div>
+                        )}
+                        {dayIndex >= 1 && dayIndex <= 5 && hourIndex >= 6 && hourIndex <= 7 && (
+                          <div className="absolute inset-1 bg-yellow-500 text-white text-xs p-1 rounded flex items-center justify-center">
+                            Almuerzo<br />12:30 - 2pm
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Add Patient Modal
+  const AddPatientModal = () => {
+    const [formData, setFormData] = useState({
+      name: '',
+      department: 'Neurology',
+      phone: '',
+      address: '',
+      email: '',
+      description: ''
+    });
+
+    const handleSubmit = () => {
+      console.log('Agregando paciente:', formData);
+      setShowAddPatientModal(false);
+    };
+
+    const handleInputChange = (field, value) => {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    if (!showAddPatientModal) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-screen overflow-y-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold">Add Patient</h2>
+            <button 
+              onClick={() => setShowAddPatientModal(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          <div>
+            {/* Profile Picture */}
+            <div className="flex items-center space-x-4 mb-6">
+              <div className="w-16 h-16 bg-gray-200 rounded-full overflow-hidden">
+                <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400"></div>
+              </div>
+              <div>
+                <h3 className="font-medium">Name</h3>
+                <button onClick={() => {}} className="text-teal-600 text-sm">Upload Photo</button>
+              </div>
+            </div>
+
+            {/* Name */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+              <input
+                type="text"
+                placeholder="Enter Patient Name"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
+
+            {/* Department */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Patient Admitted Department</label>
+              <select
+                value={formData.department}
+                onChange={(e) => handleInputChange('department', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              >
+                <option value="Neurology">Neurology</option>
+                <option value="Cardiology">Cardiology</option>
+                <option value="Orthopedics">Orthopedics</option>
+              </select>
+            </div>
+
+            {/* Phone */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                <input
+                  type="tel"
+                  placeholder="Enter phone Number"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+              </div>
+            </div>
+
+            {/* Address */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                <input
+                  type="text"
+                  placeholder="Enter Address"
+                  value={formData.address}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+              </div>
+            </div>
+
+            {/* Email */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                <input
+                  type="email"
+                  placeholder="Enter email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+              <textarea
+                placeholder="Enter biography"
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                rows={4}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
+
+            {/* File Upload */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Upload Previous Health Copy</label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <Upload className="mx-auto mb-4 text-gray-400" size={32} />
+                <p className="text-gray-600 mb-2">Choose a file or drag & drop it here.</p>
+                <p className="text-gray-400 text-sm mb-4">JPEG, PNG, PDF, and MP4 formats, up to 50 MB.</p>
+                <button onClick={() => {}} className="text-gray-500 border border-gray-300 px-4 py-2 rounded-lg">
+                  Browse File
+                </button>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setShowAddPatientModal(false)}
+                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Render current view
+  const renderCurrentView = () => {
+    switch (currentView) {
+      case 'dashboard':
+        return <DashboardView />;
+      case 'turnos':
+        return <TurnosView />;
+      case 'pacientes':
+        return <PacientesView />;
+      default:
+        return <DashboardView />;
+    }
+  };
+
+  return (
+    <div className="flex h-screen bg-gray-100">
+      <Sidebar />
+      <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
+        <Header title={currentView.charAt(0).toUpperCase() + currentView.slice(1)} />
+        <main className="flex-1 overflow-auto">
+          {renderCurrentView()}
+        </main>
+      </div>
+      <AddPatientModal />
+    </div>
+  );
+};
+
+function App() {
+  return (
+    <div className="App">
+      <Dashboard />
+    </div>
+  );
+}
+
+export default App;
