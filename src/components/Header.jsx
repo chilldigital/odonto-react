@@ -10,9 +10,11 @@ export default function Header({ title, setSidebarOpen }) {
         <h1 className="text-xl lg:text-2xl font-semibold text-gray-800">{title}</h1>
       </div>
       <div className="flex items-center space-x-4">
-        <div className="w-8 h-8 lg:w-10 lg:h-10 bg-orange-100 rounded-full flex items-center justify-center">
-          <div className="w-6 h-6 lg:w-8 lg:h-8 bg-orange-200 rounded-full"></div>
-        </div>
+        <img
+          src="/profile.jpg"
+          alt="Foto del profesional"
+          className="w-8 h-8 lg:w-10 lg:h-10 rounded-full object-cover ring-2 ring-orange-200"
+        />
       </div>
     </div>
   );
