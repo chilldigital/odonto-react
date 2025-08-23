@@ -13,6 +13,7 @@ import PatientProfileModal from './components/PatientProfileModal';
 import EditPatientModal from './components/EditPatientModal';
 import MessagePatientModal from './components/MessagePatientModal';
 import AddPatientModal from './components/AddPatientModal';
+import ClinicalRecordModal from './components/ClinicalRecordModal';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('dashboard');
@@ -28,6 +29,7 @@ export default function App() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showRecordModal, setShowRecordModal] = useState(false);
 
   const onViewPatient = useCallback((p) => { setSelectedPatient(p); setShowProfileModal(true); }, []);
   const closeProfile = useCallback(() => setShowProfileModal(false), []);
@@ -43,6 +45,7 @@ export default function App() {
   const openAddPatient = useCallback(() => setShowAddModal(true), []);
   const closeAddPatient = useCallback(() => setShowAddModal(false), []);
   const onCreatedPatient = useCallback((created) => { setPatients(prev => [created, ...prev]); }, []);
+  const onOpenRecord = useCallback((p) => { setSelectedPatient(p); setShowRecordModal(true); }, []);
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -56,6 +59,7 @@ export default function App() {
               setDashboardSearchTerm={setDashboardSearchTerm}
               onAddPatient={openAddPatient}
               onViewPatient={onViewPatient}
+              onOpenRecord={onOpenRecord}
               patients={patients}
             />
           )}
@@ -66,6 +70,7 @@ export default function App() {
               setSearchTerm={setSearchTerm}
               onAddPatient={openAddPatient}
               onViewPatient={onViewPatient}
+              onOpenRecord={onOpenRecord}
               patients={patients}
             />
           )}
@@ -77,6 +82,7 @@ export default function App() {
       <EditPatientModal open={showEditModal} patient={selectedPatient} onClose={() => setShowEditModal(false)} onSaved={onSavedPatient} />
       <MessagePatientModal open={showMessageModal} patient={selectedPatient} onClose={() => setShowMessageModal(false)} />
       <AddPatientModal open={showAddModal} onClose={closeAddPatient} onCreated={onCreatedPatient} />
+      <ClinicalRecordModal open={showRecordModal} patient={selectedPatient} onClose={() => setShowRecordModal(false)} />
     </div>
   );
 }

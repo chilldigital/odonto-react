@@ -5,7 +5,7 @@ import StatsCard from './StatsCard';
 import SearchInput from './SearchInput';
 import PatientTable from './PatientTable';
 
-export default function DashboardView({ dashboardSearchTerm, setDashboardSearchTerm, onAddPatient, onViewPatient, patients }) {
+export default function DashboardView({ dashboardSearchTerm, setDashboardSearchTerm, onAddPatient, onViewPatient, onOpenRecord, patients }) {
   const filteredPacientes = useMemo(() => {
     if (!dashboardSearchTerm.trim()) return patients.slice(0, 4);
     return patients.filter(p => p.nombre.toLowerCase().includes(dashboardSearchTerm.toLowerCase())).slice(0, 4);
@@ -58,7 +58,7 @@ export default function DashboardView({ dashboardSearchTerm, setDashboardSearchT
               <button onClick={onAddPatient} className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors w-full sm:w-auto">Agregar</button>
             </div>
           </div>
-          <PatientTable patients={filteredPacientes} onView={onViewPatient} />
+          <PatientTable patients={filteredPacientes} onView={onViewPatient} onOpenRecord={onOpenRecord} />
         </div>
       </div>
     </div>

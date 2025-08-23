@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import SearchInput from './SearchInput';
 import PatientTable from './PatientTable';
 
-export default function PacientesView({ searchTerm, setSearchTerm, onAddPatient, onViewPatient, patients }) {
+export default function PacientesView({ searchTerm, setSearchTerm, onAddPatient, onViewPatient, onOpenRecord, patients }) {
   const filteredPacientes = useMemo(() =>
     patients.filter(p => p.nombre.toLowerCase().includes(searchTerm.toLowerCase())),
   [searchTerm, patients]);
@@ -17,7 +17,7 @@ export default function PacientesView({ searchTerm, setSearchTerm, onAddPatient,
             <button onClick={onAddPatient} className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors w-full sm:w-auto">Agregar</button>
           </div>
         </div>
-        <PatientTable patients={filteredPacientes} onView={onViewPatient} />
+        <PatientTable patients={filteredPacientes} onView={onViewPatient} onOpenRecord={onOpenRecord} />
       </div>
     </div>
   );
