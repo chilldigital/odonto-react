@@ -1,12 +1,14 @@
-# Dockerfile optimizado para Easypanel
+# Dockerfile simple para debug
 
-# Dashboard Odontológico - Build multi-stage
+# Usar este si el multi-stage sigue fallando
 
-# Etapa 1: Build de la aplicación React
-
-FROM node:18-alpine AS builder
+FROM node:18-alpine
 
 WORKDIR /app
+
+# Instalar serve globalmente para servir la aplicación
+
+RUN npm install -g serve
 
 # Copiar archivos de dependencias
 
@@ -14,7 +16,7 @@ COPY package*.json ./
 
 # Instalar dependencias
 
-RUN npm ci –only=production –silent
+RUN npm install
 
 # Copiar código fuente
 
@@ -24,26 +26,10 @@ COPY . .
 
 RUN npm run build
 
-# Etapa 2: Servir con Nginx
+# Exponer puert
 
-FROM nginx:1.25-alpine
+EXPOSE 3000
 
-# Copiar configuración de Nginx
+# Servir la aplicación con serve
 
-COPY nginx.conf /etc/nginx/nginx.conf
-
-# Copiar archivos build desde la etapa anterior
-
-COPY –from=builder /app/build /usr/share/nginx/html
-
-# Crear directorio para logs
-
-RUN mkdir -p /var/log/nginx
-
-# Exponer puerto (Easypanel manejará el mapping)
-
-EXPOSE 80
-
-# Comando de inicio
-
-CMD [“nginx”, “-g”, “daemon off;”]
+CMD [“serve”, “-s”, “build”, “-l”, “3000”]
