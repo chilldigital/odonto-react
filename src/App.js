@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Calendar, Users, BarChart3, Plus, Search, Eye, Phone, MapPin, Mail, Upload, X } from 'lucide-react';
 import './App.css';
 
@@ -17,12 +17,17 @@ const mockData = {
     { fecha: "Martes 26 de Agosto", hora: "10:45 hs", paciente: "Esteban Alvarez Farhat", tipo: "Extracción" }
   ],
   pacientes: [
-    { id: 1, nombre: "Benjamin Torres Lemos", obraSocial: "OSDE", telefono: "38161234567", historiaClinica: "Abrir", ultimaVisita: "12/08/2025" },
-    { id: 2, nombre: "Agustin Corbalan", obraSocial: "Swiss Medical", telefono: "1136314341", historiaClinica: "Abrir", ultimaVisita: "02/07/2025" },
-    { id: 3, nombre: "Esteban Alvarez Farhat", obraSocial: "Medicus", telefono: "38161827364", historiaClinica: "Abrir", ultimaVisita: "24/02/2025" },
-    { id: 4, nombre: "Facundo Salado", obraSocial: "Medifé", telefono: "38169274658", historiaClinica: "Abrir", ultimaVisita: "16/06/2025" }
+    { id: 1, nombre: "Benjamin Torres Lemos", obraSocial: "OSDE", telefono: "+54 381 612 3456", email: "benjamin@ejemplo.com", direccion: "Av. Siempre Viva 742, Tucumán", historiaClinica: "Abrir", ultimaVisita: "12/08/2025" },
+    { id: 2, nombre: "Agustin Corbalan", obraSocial: "Swiss Medical", telefono: "+54 11 3631 4341", email: "agustin@ejemplo.com", direccion: "CABA, Argentina", historiaClinica: "Abrir", ultimaVisita: "02/07/2025" },
+    { id: 3, nombre: "Esteban Alvarez Farhat", obraSocial: "Medicus", telefono: "+54 381 618 2736", email: "esteban@ejemplo.com", direccion: "San Miguel de Tucumán", historiaClinica: "Abrir", ultimaVisita: "24/02/2025" },
+    { id: 4, nombre: "Facundo Salado", obraSocial: "Medifé", telefono: "+54 381 692 7465", email: "facundo@ejemplo.com", direccion: "Yerba Buena", historiaClinica: "Abrir", ultimaVisita: "16/06/2025" }
   ]
 };
+
+/* =====================
+   Helpers
+===================== */
+const initials = (name = '') => name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
 /* =====================
    Componentes puros
@@ -44,7 +49,7 @@ const SearchInput = React.memo(({ value, onChange, placeholder }) => (
 ));
 
 // Tabla de pacientes (memo)
-const PatientTable = React.memo(({ patients }) => (
+const PatientTable = React.memo(({ patients, onView }) => (
   <div className="overflow-x-auto">
     <table className="w-full min-w-full">
       <thead className="bg-gray-50 border-b">
@@ -64,7 +69,11 @@ const PatientTable = React.memo(({ patients }) => (
             <td className="p-3 lg:p-4 text-sm text-teal-600 whitespace-nowrap">{paciente.historiaClinica}</td>
             <td className="p-3 lg:p-4 text-sm text-gray-900 whitespace-nowrap">{paciente.ultimaVisita}</td>
             <td className="p-3 lg:p-4">
-              <button className="text-gray-400 hover:text-gray-600">
+              <button
+                className="text-gray-400 hover:text-gray-600"
+                onClick={() => onView && onView(paciente)}
+                aria-label={`Ver perfil de ${paciente.nombre}`}
+              >
                 <Eye size={16} />
               </button>
             </td>
@@ -74,6 +83,109 @@ const PatientTable = React.memo(({ patients }) => (
     </table>
   </div>
 ));
+
+/* ===============
+   Patient Modal
+================ */
+const PatientProfileModal = ({ open, patient, onClose, onEdit, onMessage }) => {
+  // cerrar con Esc
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onClose();
+    if (open) window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (!open || !patient) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden="true" />
+      {/* Card */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="relative bg-white w-[90%] max-w-md rounded-2xl shadow-xl border p-6 animate-[fadeIn_.15s_ease-out]"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Paciente</h3>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+            aria-label="Cerrar"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Avatar + Name */}
+        <div className="flex flex-col items-center mb-5">
+          <div className="w-28 h-28 rounded-2xl bg-gray-100 overflow-hidden flex items-center justify-center text-gray-600 text-2xl font-semibold">
+            {/* Si tuvieras patient.photoUrl, usalo en un <img> */}
+            {/* <img src={patient.photoUrl} alt={patient.nombre} className="w-full h-full object-cover" /> */}
+            {initials(patient.nombre)}
+          </div>
+          <div className="mt-4 text-center">
+            <div className="text-xl font-semibold text-gray-900">{patient.nombre}</div>
+            <div className="text-sm text-gray-500">{patient.obraSocial || 'Paciente'}</div>
+          </div>
+        </div>
+
+        <hr className="my-4" />
+
+        {/* Info */}
+        <div className="space-y-4">
+          <div className="flex items-start">
+            <Phone className="mt-1 mr-3 text-gray-400" size={18} />
+            <div>
+              <div className="text-sm text-gray-500">Teléfono</div>
+              <div className="text-sm text-gray-900">{patient.telefono || '-'}</div>
+            </div>
+          </div>
+
+          <div className="flex items-start">
+            <Mail className="mt-1 mr-3 text-gray-400" size={18} />
+            <div>
+              <div className="text-sm text-gray-500">Email</div>
+              <div className="text-sm text-gray-900">{patient.email || '-'}</div>
+            </div>
+          </div>
+
+          <div className="flex items-start">
+            <MapPin className="mt-1 mr-3 text-gray-400" size={18} />
+            <div>
+              <div className="text-sm text-gray-500">Dirección</div>
+              <div className="text-sm text-gray-900">{patient.direccion || '-'}</div>
+            </div>
+          </div>
+        </div>
+
+        <hr className="my-6" />
+
+        {/* Actions */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            className="px-4 py-2 rounded-lg border text-gray-700 hover:bg-gray-50"
+            onClick={() => onEdit && onEdit(patient)}
+          >
+            Edit
+          </button>
+          <button
+            className="px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700"
+            onClick={() => onMessage && onMessage(patient)}
+          >
+            Message
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* =====================
+   Otras UI pieces
+===================== */
 
 const Sidebar = ({ currentView, setCurrentView, sidebarOpen, setSidebarOpen }) => (
   <>
@@ -175,10 +287,10 @@ const StatsCard = ({ title, value, color }) => (
 );
 
 /* =====================
-   Vistas (top-level)
+   Vistas
 ===================== */
 
-const DashboardView = ({ dashboardSearchTerm, setDashboardSearchTerm, onAddPatient }) => {
+const DashboardView = ({ dashboardSearchTerm, setDashboardSearchTerm, onAddPatient, onViewPatient }) => {
   const filteredPacientes = useMemo(() => {
     if (!dashboardSearchTerm.trim()) return mockData.pacientes.slice(0, 4);
     return mockData.pacientes
@@ -187,7 +299,6 @@ const DashboardView = ({ dashboardSearchTerm, setDashboardSearchTerm, onAddPatie
   }, [dashboardSearchTerm]);
 
   const handleSearchChange = useCallback((e) => {
-    // Importante: NO usar preventDefault/stopPropagation aquí
     setDashboardSearchTerm(e.target.value);
   }, [setDashboardSearchTerm]);
 
@@ -247,14 +358,14 @@ const DashboardView = ({ dashboardSearchTerm, setDashboardSearchTerm, onAddPatie
               </button>
             </div>
           </div>
-          <PatientTable patients={filteredPacientes} />
+          <PatientTable patients={filteredPacientes} onView={onViewPatient} />
         </div>
       </div>
     </div>
   );
 };
 
-const PacientesView = ({ searchTerm, setSearchTerm, onAddPatient }) => {
+const PacientesView = ({ searchTerm, setSearchTerm, onAddPatient, onViewPatient }) => {
   const filteredPacientes = useMemo(() => {
     return mockData.pacientes.filter(p =>
       p.nombre.toLowerCase().includes(searchTerm.toLowerCase())
@@ -286,44 +397,7 @@ const PacientesView = ({ searchTerm, setSearchTerm, onAddPatient }) => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">
-                  <input type="checkbox" className="mr-3" />
-                  Nombre
-                </th>
-                <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Obra Social</th>
-                <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Teléfono</th>
-                <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Historia Clínica</th>
-                <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Última Visita</th>
-                <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPacientes.map((paciente) => (
-                <tr key={paciente.id} className="border-b hover:bg-gray-50">
-                  <td className="p-3 lg:p-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <input type="checkbox" className="mr-3" />
-                      <span className="text-sm text-gray-900">{paciente.nombre}</span>
-                    </div>
-                  </td>
-                  <td className="p-3 lg:p-4 text-sm text-blue-600 whitespace-nowrap">{paciente.obraSocial}</td>
-                  <td className="p-3 lg:p-4 text-sm text-gray-900 whitespace-nowrap">{paciente.telefono}</td>
-                  <td className="p-3 lg:p-4 text-sm text-teal-600 whitespace-nowrap">{paciente.historiaClinica}</td>
-                  <td className="p-3 lg:p-4 text-sm text-gray-900 whitespace-nowrap">{paciente.ultimaVisita}</td>
-                  <td className="p-3 lg:p-4">
-                    <button className="text-gray-400 hover:text-gray-600">
-                      <Eye size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <PatientTable patients={filteredPacientes} onView={onViewPatient} />
       </div>
     </div>
   );
@@ -558,8 +632,19 @@ const Dashboard = () => {
   const [dashboardSearchTerm, setDashboardSearchTerm] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Modal de perfil
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
   const openAddPatient = useCallback(() => setShowAddPatientModal(true), []);
   const closeAddPatient = useCallback(() => setShowAddPatientModal(false), []);
+
+  const handleViewPatient = useCallback((patient) => {
+    setSelectedPatient(patient);
+    setShowProfileModal(true);
+  }, []);
+
+  const closeProfileModal = useCallback(() => setShowProfileModal(false), []);
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -577,6 +662,7 @@ const Dashboard = () => {
               dashboardSearchTerm={dashboardSearchTerm}
               setDashboardSearchTerm={setDashboardSearchTerm}
               onAddPatient={openAddPatient}
+              onViewPatient={handleViewPatient}
             />
           )}
           {currentView === 'turnos' && <TurnosView />}
@@ -585,11 +671,21 @@ const Dashboard = () => {
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
               onAddPatient={openAddPatient}
+              onViewPatient={handleViewPatient}
             />
           )}
         </main>
       </div>
+
+      {/* Modales */}
       <AddPatientModal show={showAddPatientModal} onClose={closeAddPatient} />
+      <PatientProfileModal
+        open={showProfileModal}
+        patient={selectedPatient}
+        onClose={closeProfileModal}
+        onEdit={(p) => console.log('Editar paciente', p)}
+        onMessage={(p) => console.log('Mensaje a', p)}
+      />
     </div>
   );
 };
