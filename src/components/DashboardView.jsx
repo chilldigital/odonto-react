@@ -31,7 +31,7 @@ export default function DashboardView({ dashboardSearchTerm, setDashboardSearchT
               {mockData.proximosTurnos.map((turno, index) => (
                 <div key={`turno-${index}`} className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 py-3 border-b border-gray-100 last:border-b-0">
                   <div className="flex items-center space-x-4">
-                    <div className="w-3 h-3 bg-teal-500 rounded-full flex-shrink-0"></div>
+                    <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0"></div>
                     <div>
                       <p className="text-sm text-gray-500">{turno.fecha}</p>
                       <p className="text-sm text-gray-500">{turno.hora}</p>

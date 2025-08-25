@@ -14,8 +14,10 @@ import EditPatientModal from './components/EditPatientModal';
 import MessagePatientModal from './components/MessagePatientModal';
 import AddPatientModal from './components/AddPatientModal';
 import ClinicalRecordModal from './components/ClinicalRecordModal';
+import LoginView from './components/LoginView';
 
 export default function App() {
+  const [authed, setAuthed] = useState(!!localStorage.getItem('token'));
   const [currentView, setCurrentView] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -47,9 +49,18 @@ export default function App() {
   const onCreatedPatient = useCallback((created) => { setPatients(prev => [created, ...prev]); }, []);
   const onOpenRecord = useCallback((p) => { setSelectedPatient(p); setShowRecordModal(true); }, []);
 
+  const handleLoginSuccess = useCallback(() => setAuthed(true), []);
+  const handleLogout = useCallback(() => {
+    try { localStorage.removeItem('token'); } catch (e) {}
+    setAuthed(false);
+  }, []);
+
+  if (!authed) {
+    return <LoginView onSuccess={handleLoginSuccess} />;
+  }
   return (
     <div className="flex h-screen bg-gray-100">
-      <Sidebar currentView={currentView} setCurrentView={setCurrentView} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      <Sidebar currentView={currentView} setCurrentView={setCurrentView} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onLogout={handleLogout} />
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
         <Header title={currentView.charAt(0).toUpperCase() + currentView.slice(1)} setSidebarOpen={setSidebarOpen} />
         <main className="flex-1 overflow-auto">
