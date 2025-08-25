@@ -15,11 +15,11 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "devDependencies": {
-  "typescript": "5.9.2"
-}
+    "eject": "react-scripts eject"
   },
+  "devDependencies": {
+  "typescript": "5.9.2"
+},
   "browserslist": {
     "production": [
       ">0.2%",
