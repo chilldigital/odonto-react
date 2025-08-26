@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
-
-const N8N_BASE = process.env.REACT_APP_N8N_BASE;
-const URL_CREATE_PATIENT = N8N_BASE ? `${N8N_BASE}/webhook/create-patient` : '';
+import { URL_CREATE_PATIENT } from '../config/n8n';
 
 /**
  * Modal para crear un paciente.
  * Campos: Nombre, Teléfono, Email, Obra Social, Número de Afiliado,
  * Fecha de Nacimiento, Notas y subir Historia Clínica (imagen o PDF).
  */
-export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
+export default function AddPatientModal({ 
+  open, 
+  isOpen, 
+  onClose, 
+  onCreated, 
+  onCreate, // mantener por compatibilidad
+  loading = false 
+}) {
   const openFlag = open ?? isOpen; // soporta ambas props
 
   const [form, setForm] = useState({
@@ -17,10 +22,13 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
     email: '',
     obraSocial: '',
     numeroAfiliado: '',
+    direccion: '',
     fechaNacimiento: '',
     notas: '',
     historiaClinicaFile: null,
   });
+
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -39,6 +47,7 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
       email: '',
       obraSocial: '',
       numeroAfiliado: '',
+      direccion: '',
       fechaNacimiento: '',
       notas: '',
       historiaClinicaFile: null,
@@ -47,69 +56,38 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Si hay endpoint de n8n, enviamos allí; si no, usamos onCreate como fallback.
-    const formData = new FormData();
-    formData.append('name', form.nombre || '');
-    formData.append('phone', form.telefono || '');
-    formData.append('email', form.email || '');
-    formData.append('insurance', form.obraSocial || '');
-    formData.append('affiliateNumber', form.numeroAfiliado || '');
-    formData.append('birthDate', form.fechaNacimiento || '');
-    formData.append('notes', form.notas || '');
-    if (form.historiaClinicaFile) {
-      // nombre de campo estándar para n8n
-      formData.append('clinicalRecord', form.historiaClinicaFile);
-    }
+    setSubmitting(true);
 
     try {
-      let created = null;
+      // Preparar datos para enviar
+      const patientData = {
+        nombre: form.nombre || '',
+        telefono: form.telefono || '',
+        email: form.email || '',
+        obraSocial: form.obraSocial || '',
+        direccion: form.direccion || '',
+        numeroAfiliado: form.numeroAfiliado || '',
+        fechaNacimiento: form.fechaNacimiento || '',
+        notas: form.notas || '',
+      };
 
-      if (URL_CREATE_PATIENT) {
-        const res = await fetch(URL_CREATE_PATIENT, {
-          method: 'POST',
-          body: formData,
-        });
-        if (!res.ok) {
-          throw new Error(`Webhook create-patient respondió ${res.status}`);
-        }
-        const data = await res.json();
-        // Mapeo defensivo: tomamos lo que venga de n8n/Airtable y caemos a lo enviado si falta algo
-        created = {
-          id: data.id || data.recordId || data.ID || crypto.randomUUID?.() || String(Math.random()),
-          nombre: data.nombre || data.name || form.nombre,
-          obraSocial: data.obraSocial || data.insurance || form.obraSocial || '',
-          historiaClinica: data.historiaClinica || data.clinicalRecord || '',
-          ultimaVisita: data.ultimaVisita || data.lastVisit || '',
-        };
-      } else {
-        // Fallback local si aún no hay backend configurado
-        created = {
-          id: crypto.randomUUID?.() || String(Math.random()),
-          nombre: form.nombre,
-          obraSocial: form.obraSocial,
-          historiaClinica: '',
-          ultimaVisita: '',
-        };
+      // El hook usePatients maneja la creación vía PatientService
+      const callback = onCreated || onCreate;
+      if (callback) {
+        await callback(patientData);
+        resetForm();
       }
 
-      // Notificamos a la vista de Pacientes para que inserte el nuevo paciente en la tabla
-      window.dispatchEvent(new CustomEvent('patient:created', { detail: created }));
-
-      // Si el padre quiere además manejarlo por callback, lo llamamos
-      if (typeof onCreate === 'function') {
-        await onCreate(created);
-      }
-
-      resetForm();
-      onClose?.();
     } catch (err) {
-      console.error('Error al crear paciente', err);
-      // Podrías mostrar un toast aquí si tenés sistema de notificaciones
+      console.error('Error al crear paciente:', err);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   if (!openFlag) return null;
+
+  const isLoading = loading || submitting;
 
   return (
     <div className="fixed inset-0 z-50">
@@ -128,7 +106,8 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100"
+              disabled={isLoading}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 disabled:opacity-50"
               aria-label="Cerrar"
             >
               ×
@@ -139,14 +118,15 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
           <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
             {/* Nombre */}
             <div>
-              <label className="block text-sm font-medium text-gray-700">Nombre</label>
+              <label className="block text-sm font-medium text-gray-700">Nombre *</label>
               <input
                 name="nombre"
                 value={form.nombre}
                 onChange={handleChange}
                 type="text"
                 placeholder="Ej: Juan Pérez"
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+                disabled={isLoading}
                 required
               />
             </div>
@@ -160,7 +140,8 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
                 onChange={handleChange}
                 type="tel"
                 placeholder="Ej: +54 11 5555-5555"
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+                disabled={isLoading}
               />
             </div>
 
@@ -173,7 +154,8 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
                 onChange={handleChange}
                 type="email"
                 placeholder="Ej: paciente@mail.com"
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+                disabled={isLoading}
               />
             </div>
 
@@ -186,20 +168,22 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
                 onChange={handleChange}
                 type="text"
                 placeholder="Ej: OSDE / Swiss Medical / ..."
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+                disabled={isLoading}
               />
             </div>
 
-            {/* Número de Afiliado */}
+            {/* Dirección */}
             <div>
-              <label className="block text-sm font-medium text-gray-700">Número de Afiliado</label>
+              <label className="block text-sm font-medium text-gray-700">Dirección</label>
               <input
-                name="numeroAfiliado"
-                value={form.numeroAfiliado}
+                name="direccion"
+                value={form.direccion}
                 onChange={handleChange}
                 type="text"
-                placeholder="Ej: 1234-5678-90"
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="Ej: Av. Corrientes 1234, CABA"
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+                disabled={isLoading}
               />
             </div>
 
@@ -211,7 +195,8 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
                 value={form.fechaNacimiento}
                 onChange={handleChange}
                 type="date"
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+                disabled={isLoading}
               />
             </div>
 
@@ -224,39 +209,30 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
                 onChange={handleChange}
                 rows={3}
                 placeholder="Observaciones relevantes, alergias, antecedentes, etc."
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+                disabled={isLoading}
               />
-            </div>
-
-            {/* Historia Clínica (archivo) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Historia Clínica (imagen o PDF)</label>
-              <input
-                name="historiaClinicaFile"
-                onChange={handleFileChange}
-                type="file"
-                accept="image/*,application/pdf"
-                className="mt-1 w-full cursor-pointer rounded-md border border-gray-300 bg-white px-3 py-2 file:mr-4 file:cursor-pointer file:rounded-md file:border-0 file:bg-emerald-600 file:px-3 file:py-2 file:text-white hover:file:bg-emerald-700"
-              />
-              {form.historiaClinicaFile && (
-                <p className="mt-1 text-xs text-gray-500">Archivo seleccionado: {form.historiaClinicaFile.name}</p>
-              )}
             </div>
 
             {/* Acciones */}
             <div className="mt-6 flex items-center justify-end gap-3">
               <button
                 type="button"
-                onClick={() => onClose?.()}
-                className="rounded-md border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
+                onClick={onClose}
+                disabled={isLoading}
+                className="rounded-md border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="rounded-md bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-700"
+                disabled={isLoading || !form.nombre.trim()}
+                className="rounded-md bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
               >
-                Crear
+                {isLoading && (
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                )}
+                {isLoading ? 'Creando...' : 'Crear'}
               </button>
             </div>
           </form>

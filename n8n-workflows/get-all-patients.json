@@ -1,0 +1,103 @@
+{
+  "name": "Get All Patients",
+  "description": "Webhook para obtener todos los pacientes desde Airtable",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "get-patients",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [200, 200],
+      "webhookId": "get-patients-webhook"
+    },
+    {
+      "parameters": {
+        "operation": "list",
+        "base": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "id": "airtable-list",
+      "name": "Airtable - Get All Patients",
+      "type": "n8n-nodes-base.airtable",
+      "position": [400, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Transformar datos de Airtable al formato que espera el frontend\nconst patients = items.map(item => {\n  const fields = item.json.fields;\n  \n  return {\n    id: item.json.id,\n    airtableId: item.json.id,\n    nombre: fields.Nombre || fields.nombre || '',\n    obraSocial: fields['Obra Social'] || fields.obraSocial || '',\n    telefono: fields.Telefono || fields.telefono || '',\n    email: fields.Email || fields.email || '',\n    direccion: fields.Direccion || fields.direccion || '',\n    ultimaVisita: fields['Ultima Visita'] || fields.ultimaVisita || '-',\n    fechaCreacion: fields['Fecha Creacion'] || fields.fechaCreacion || new Date().toISOString(),\n    notas: fields.Notas || fields.notas || ''\n  };\n});\n\nconsole.log(`Transformados ${patients.length} pacientes`);\nreturn [{ json: { patients } }];"
+      },
+      "id": "transform-data",
+      "name": "Transform Data",
+      "type": "n8n-nodes-base.code",
+      "position": [600, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": {
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Access-Control-Allow-Origin", 
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, Authorization"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-to-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [800, 200]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{"node": "Airtable - Get All Patients", "type": "main", "index": 0}]]
+    },
+    "Airtable - Get All Patients": {
+      "main": [[{"node": "Transform Data", "type": "main", "index": 0}]]
+    },
+    "Transform Data": {
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2024-08-26T00:00:00.000Z",
+  "versionId": "1"
+}

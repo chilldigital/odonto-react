@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import './App.css';
 
-import { initialPatients } from './data/mockData';
+// Import the new usePatients hook
+import { usePatients } from './hooks/usePatients';
 
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -21,7 +22,15 @@ export default function App() {
   const [currentView, setCurrentView] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const [patients, setPatients] = useState(initialPatients);
+  // Replace local patients state with the usePatients hook
+  const { 
+    patients, 
+    loading, 
+    error, 
+    addPatient, 
+    updatePatient, 
+    refreshPatients 
+  } = usePatients();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [dashboardSearchTerm, setDashboardSearchTerm] = useState('');
@@ -39,14 +48,29 @@ export default function App() {
   const onEditFromProfile = useCallback((p) => { setShowProfileModal(false); setTimeout(() => { setSelectedPatient(p); setShowEditModal(true); }, 100); }, []);
   const onMessageFromProfile = useCallback((p) => { setShowProfileModal(false); setTimeout(() => { setSelectedPatient(p); setShowMessageModal(true); }, 100); }, []);
 
-  const onSavedPatient = useCallback((updated) => {
-    setPatients(prev => prev.map(p => p.id === updated.id ? updated : p));
-    setSelectedPatient(updated);
-  }, []);
+  // Updated to use the updatePatient function from the hook
+  const onSavedPatient = useCallback(async (updated) => {
+    try {
+      await updatePatient(updated);
+      setSelectedPatient(updated);
+    } catch (error) {
+      console.error('Error updating patient:', error);
+    }
+  }, [updatePatient]);
 
   const openAddPatient = useCallback(() => setShowAddModal(true), []);
   const closeAddPatient = useCallback(() => setShowAddModal(false), []);
-  const onCreatedPatient = useCallback((created) => { setPatients(prev => [created, ...prev]); }, []);
+  
+  // Updated to use the addPatient function from the hook
+  const onCreatedPatient = useCallback(async (created) => {
+    try {
+      await addPatient(created);
+      setShowAddModal(false);
+    } catch (error) {
+      console.error('Error creating patient:', error);
+    }
+  }, [addPatient]);
+  
   const onOpenRecord = useCallback((p) => { setSelectedPatient(p); setShowRecordModal(true); }, []);
 
   const handleLoginSuccess = useCallback(() => setAuthed(true), []);
@@ -58,11 +82,28 @@ export default function App() {
   if (!authed) {
     return <LoginView onSuccess={handleLoginSuccess} />;
   }
+
   return (
     <div className="flex h-screen bg-gray-100">
       <Sidebar currentView={currentView} setCurrentView={setCurrentView} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onLogout={handleLogout} />
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
         <Header title={currentView.charAt(0).toUpperCase() + currentView.slice(1)} setSidebarOpen={setSidebarOpen} />
+        
+        {/* Show error banner if there's an error loading patients */}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 mx-4 mt-4 rounded">
+            <div className="flex justify-between items-center">
+              <span>Error cargando pacientes: {error}</span>
+              <button 
+                onClick={refreshPatients}
+                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+              >
+                Reintentar
+              </button>
+            </div>
+          </div>
+        )}
+
         <main className="flex-1 overflow-auto">
           {currentView === 'dashboard' && (
             <DashboardView
@@ -72,6 +113,7 @@ export default function App() {
               onViewPatient={onViewPatient}
               onOpenRecord={onOpenRecord}
               patients={patients}
+              loading={loading}
             />
           )}
           {currentView === 'turnos' && <TurnosView />}
@@ -83,6 +125,7 @@ export default function App() {
               onViewPatient={onViewPatient}
               onOpenRecord={onOpenRecord}
               patients={patients}
+              loading={loading}
             />
           )}
         </main>
@@ -90,9 +133,9 @@ export default function App() {
 
       {/* Modales */}
       <PatientProfileModal open={showProfileModal} patient={selectedPatient} onClose={closeProfile} onEdit={onEditFromProfile} onMessage={onMessageFromProfile} />
-      <EditPatientModal open={showEditModal} patient={selectedPatient} onClose={() => setShowEditModal(false)} onSaved={onSavedPatient} />
+      <EditPatientModal open={showEditModal} patient={selectedPatient} onClose={() => setShowEditModal(false)} onSaved={onSavedPatient} loading={loading} />
       <MessagePatientModal open={showMessageModal} patient={selectedPatient} onClose={() => setShowMessageModal(false)} />
-      <AddPatientModal open={showAddModal} onClose={closeAddPatient} onCreated={onCreatedPatient} />
+      <AddPatientModal open={showAddModal} onClose={closeAddPatient} onCreated={onCreatedPatient} loading={loading} />
       <ClinicalRecordModal open={showRecordModal} patient={selectedPatient} onClose={() => setShowRecordModal(false)} />
     </div>
   );

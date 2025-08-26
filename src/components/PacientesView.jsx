@@ -1,27 +1,6 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import SearchInput from './SearchInput';
 import PatientTable from './PatientTable';
-
-// Traemos las URLs desde el config si existen (fallback seguro si aún no están creadas)
-let URL_LIST_PATIENTS = '';
-try {
-  // ruta relativa desde /components
-  // si no existe el archivo, el try/catch evita romper el build
-  const cfg = require('../config/n8n');
-  URL_LIST_PATIENTS = cfg.URL_LIST_PATIENTS || cfg.URL_GCAL_EVENTS || '';
-} catch (_) {
-  // sin config de n8n aún
-}
-
-// Función auxiliar para mapear la respuesta del webhook a la forma usada por la UI
-const mapToUi = (rows = []) =>
-  rows.map((r) => ({
-    id: r.id || r.recordId || r.ID || crypto.randomUUID?.() || String(Math.random()),
-    nombre: r.nombre || r.name || r.Nombre || '',
-    obraSocial: r.obraSocial || r.insurance || r['Obra Social'] || '',
-    historiaClinica: r.historiaClinica || r.clinicalRecord || '',
-    ultimaVisita: r.ultimaVisita || r.lastVisit || r['Última Visita'] || '',
-  }));
 
 export default function PacientesView({
   searchTerm,
@@ -29,65 +8,27 @@ export default function PacientesView({
   onAddPatient,
   onViewPatient,
   onOpenRecord,
-  patients, // si viene desde el padre, lo privilegiamos
-  setPatients, // opcional: si el padre expone setter, lo usamos para push del nuevo paciente
-  fetchFromN8n = true, // permite desactivar el fetch automático si el padre ya maneja datos
+  patients = [],
+  loading = false
 }) {
-  const [localPatients, setLocalPatients] = useState([]);
-
-  // 1) Fetch inicial desde n8n si no recibimos pacientes por props
-  useEffect(() => {
-    const shouldFetch = !patients && fetchFromN8n && URL_LIST_PATIENTS;
-    if (!shouldFetch) return;
-
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(URL_LIST_PATIENTS, { method: 'GET' });
-        const data = await res.json();
-        if (!cancelled) setLocalPatients(mapToUi(Array.isArray(data) ? data : data?.records || []));
-      } catch (err) {
-        console.error('Error listando pacientes desde n8n:', err);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [patients, fetchFromN8n]);
-
-  // 2) Suscripción a evento global para insertar el nuevo paciente tras crear
-  //    (AddPatientModal puede despachar: window.dispatchEvent(new CustomEvent('patient:created', { detail })) )
-  useEffect(() => {
-    const handler = (e) => {
-      const nuevo = e?.detail;
-      if (!nuevo) return;
-      if (typeof setPatients === 'function') {
-        setPatients((prev = []) => [nuevo, ...prev]);
-      } else {
-        setLocalPatients((prev) => [nuevo, ...prev]);
-      }
-    };
-
-    window.addEventListener('patient:created', handler);
-    return () => window.removeEventListener('patient:created', handler);
-  }, [setPatients]);
-
-  const dataSource = patients ?? localPatients;
-
   const filteredPacientes = useMemo(
     () =>
-      (dataSource || []).filter((p) =>
+      patients.filter((p) =>
         (p?.nombre || '').toLowerCase().includes((searchTerm || '').toLowerCase())
       ),
-    [searchTerm, dataSource]
+    [searchTerm, patients]
   );
 
   return (
     <div className="p-4 lg:p-8 bg-gray-50 min-h-screen">
       <div className="bg-white rounded-lg shadow-sm border">
         <div className="p-4 lg:p-6 border-b flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
-          <h2 className="text-lg font-semibold text-gray-800">Pacientes</h2>
+          <h2 className="text-lg font-semibold text-gray-800">
+            Pacientes
+            {loading && (
+              <span className="ml-2 text-sm text-gray-500">(Cargando...)</span>
+            )}
+          </h2>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
             <SearchInput
               value={searchTerm}
@@ -96,17 +37,26 @@ export default function PacientesView({
             />
             <button
               onClick={onAddPatient}
-              className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors w-full sm:w-auto"
+              disabled={loading}
+              className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Agregar
             </button>
           </div>
         </div>
-        <PatientTable
-          patients={filteredPacientes}
-          onView={onViewPatient}
-          onOpenRecord={onOpenRecord}
-        />
+        
+        {loading ? (
+          <div className="p-8 text-center">
+            <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-teal-600"></div>
+            <p className="mt-2 text-gray-500">Cargando pacientes...</p>
+          </div>
+        ) : (
+          <PatientTable
+            patients={filteredPacientes}
+            onView={onViewPatient}
+            onOpenRecord={onOpenRecord}
+          />
+        )}
       </div>
     </div>
   );
