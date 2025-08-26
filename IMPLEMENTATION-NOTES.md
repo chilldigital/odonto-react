@@ -56,22 +56,22 @@ El workflow espera estos campos (ajusta según tu base):
 
 ### 3. **Formato de respuesta esperado:**
 ```json
-{
-  "patients": [
-    {
-      "id": "rec1234567890",
-      "airtableId": "rec1234567890", 
-      "nombre": "Juan Pérez",
-      "obraSocial": "OSDE",
-      "telefono": "+54 11 5555 5555",
-      "email": "juan@ejemplo.com",
-      "direccion": "CABA",
-      "ultimaVisita": "2024-08-15",
-      "fechaCreacion": "2024-08-01T10:00:00Z",
-      "notas": "Paciente con sensibilidad dental"
-    }
-  ]
-}
+  {
+    "patients": [
+      {
+        "id": "rec1234567890",
+        "airtableId": "rec1234567890", 
+        "nombre": "Juan Pérez",
+        "obraSocial": "OSDE",
+        "telefono": "+54 11 5555 5555",
+        "email": "juan@ejemplo.com",
+        "direccion": "CABA",
+        "ultimaVisita": "2024-08-15",
+        "fechaCreacion": "2024-08-01T10:00:00Z",
+        "notas": "Paciente con sensibilidad dental"
+      }
+    ]
+  }
 ```
 
 ### 4. **Probar la implementación:**
