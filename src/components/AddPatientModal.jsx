@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 
-const N8N_BASE = process.env.REACT_APP_N8N_BASE;
-const URL_CREATE_PATIENT = N8N_BASE ? `${N8N_BASE}/webhook/create-patient` : '';
+import { URL_CREATE_PATIENT } from '../config/n8n';
 
 /**
  * Modal para crear un paciente.
