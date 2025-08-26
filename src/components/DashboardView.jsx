@@ -1,9 +1,10 @@
 import React, { useMemo, useCallback } from 'react';
-import { Eye } from 'lucide-react';
+import { Eye, ArrowRight } from 'lucide-react';
 import { mockData } from '../data/mockData';
 import StatsCard from './StatsCard';
 import SearchInput from './SearchInput';
 import PatientTable from './PatientTable';
+import { Link } from 'react-router-dom';
 
 export default function DashboardView({ 
   dashboardSearchTerm, 
@@ -21,6 +22,11 @@ export default function DashboardView({
     ).slice(0, 4);
   }, [dashboardSearchTerm, patients]);
 
+  const showViewAll = useMemo(
+    () => !dashboardSearchTerm.trim() && patients.length > 4,
+    [dashboardSearchTerm, patients]
+  );
+
   const handleSearchChange = useCallback((e) => setDashboardSearchTerm(e.target.value), [setDashboardSearchTerm]);
 
   return (
@@ -33,8 +39,15 @@ export default function DashboardView({
 
       <div className="space-y-6 lg:space-y-8">
         <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-4 lg:p-6 border-b">
+          <div className="p-4 lg:p-6 border-b flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-800">Próximos Turnos</h2>
+            <Link
+              to="/turnos"
+              className="inline-flex items-center text-teal-600 hover:text-teal-700 text-sm font-medium"
+            >
+              Ver todos
+              <ArrowRight size={16} className="ml-1" />
+            </Link>
           </div>
           <div className="p-4 lg:p-6">
             <div className="space-y-4">
@@ -62,12 +75,23 @@ export default function DashboardView({
 
         <div className="bg-white rounded-lg shadow-sm border">
           <div className="p-4 lg:p-6 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
-            <h2 className="text-lg font-semibold text-gray-800">
-              Pacientes
-              {loading && (
-                <span className="ml-2 text-sm text-gray-500">(Cargando...)</span>
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold text-gray-800">
+                Últimos pacientes
+                {loading && (
+                  <span className="ml-2 text-sm text-gray-500">(Cargando...)</span>
+                )}
+              </h2>
+              {showViewAll && (
+                <Link
+                  to="/pacientes"
+                  className="inline-flex items-center text-teal-600 hover:text-teal-700 text-sm font-medium"
+                >
+                  Ver todos
+                  <ArrowRight size={16} className="ml-1" />
+                </Link>
               )}
-            </h2>
+            </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
               <SearchInput 
                 value={dashboardSearchTerm} 
@@ -87,7 +111,6 @@ export default function DashboardView({
           {loading ? (
             <div className="p-8 text-center">
               <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-teal-600"></div>
-              <p className="mt-2 text-gray-500">Cargando pacientes...</p>
             </div>
           ) : (
             <PatientTable 

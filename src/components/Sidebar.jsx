@@ -1,4 +1,5 @@
 import React from 'react';
+import { NavLink } from 'react-router-dom';
 import { Calendar, Users, BarChart3, X, LogOut } from 'lucide-react';
 
 export default function Sidebar({ currentView, setCurrentView, sidebarOpen, setSidebarOpen, onLogout }) {
@@ -18,22 +19,49 @@ export default function Sidebar({ currentView, setCurrentView, sidebarOpen, setS
         <nav className="mt-6">
           <ul className="space-y-2 px-4">
             <li>
-              <button onClick={() => { setCurrentView('dashboard'); setSidebarOpen(false); }}
-                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left ${currentView === 'dashboard' ? 'bg-teal-50 text-teal-600 border-l-4 border-teal-600' : 'text-gray-600 hover:bg-gray-50'}`}>
+              <NavLink
+                to="/"
+                onClick={() => setSidebarOpen(false)}
+                className={({ isActive }) =>
+                  `w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left ${
+                    isActive
+                      ? 'bg-teal-50 text-teal-600 border-l-4 border-teal-600'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`
+                }
+              >
                 <BarChart3 size={20} /><span>Dashboard</span>
-              </button>
+              </NavLink>
             </li>
             <li>
-              <button onClick={() => { setCurrentView('turnos'); setSidebarOpen(false); }}
-                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left ${currentView === 'turnos' ? 'bg-teal-50 text-teal-600 border-l-4 border-teal-600' : 'text-gray-600 hover:bg-gray-50'}`}>
+              <NavLink
+                to="/turnos"
+                onClick={() => setSidebarOpen(false)}
+                className={({ isActive }) =>
+                  `w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left ${
+                    isActive
+                      ? 'bg-teal-50 text-teal-600 border-l-4 border-teal-600'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`
+                }
+              >
                 <Calendar size={20} /><span>Turnos</span>
-              </button>
+              </NavLink>
             </li>
             <li>
-              <button onClick={() => { setCurrentView('pacientes'); setSidebarOpen(false); }}
-                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left ${currentView === 'pacientes' ? 'bg-teal-50 text-teal-600 border-l-4 border-teal-600' : 'text-gray-600 hover:bg-gray-50'}`}>
+              <NavLink
+                to="/pacientes"
+                onClick={() => setSidebarOpen(false)}
+                className={({ isActive }) =>
+                  `w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left ${
+                    isActive
+                      ? 'bg-teal-50 text-teal-600 border-l-4 border-teal-600'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`
+                }
+              >
                 <Users size={20} /><span>Pacientes</span>
-              </button>
+              </NavLink>
             </li>
           </ul>
         </nav>
