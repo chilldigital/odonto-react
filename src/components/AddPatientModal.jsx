@@ -49,13 +49,13 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
 
     // Si hay endpoint de n8n, enviamos allí; si no, usamos onCreate como fallback.
     const formData = new FormData();
-    formData.append('name', form.nombre || '');
-    formData.append('phone', form.telefono || '');
-    formData.append('email', form.email || '');
-    formData.append('insurance', form.obraSocial || '');
-    formData.append('affiliateNumber', form.numeroAfiliado || '');
-    formData.append('birthDate', form.fechaNacimiento || '');
-    formData.append('notes', form.notas || '');
+    formData.append('Nombre', form.nombre || '');
+    formData.append('Telefono', form.telefono || '');
+    formData.append('Email', form.email || '');
+    formData.append('ObraSocial', form.obraSocial || '');
+    formData.append('NumeroAfiliado', form.numeroAfiliado || '');
+    formData.append('FechaNacimiento', form.fechaNacimiento || '');
+    formData.append('Notas', form.notas || '');
     if (form.historiaClinicaFile) {
       // nombre de campo estándar para n8n
       formData.append('clinicalRecord', form.historiaClinicaFile);
