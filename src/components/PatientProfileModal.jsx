@@ -15,33 +15,18 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
 
   if (!open || !patient) return null;
 
-  // Normalize a key: lowercase, remove diacritics, replace underscores/spaces
-  const normKey = (k) =>
-    k
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[\s_]+/g, '');
-
-  // Try to find the affiliate number field in patient or patient.fields via fuzzy key matching
-  const getAffiliateNumber = (patientObj) => {
-    if (!patientObj) return undefined;
-    const possibleKeys = [
-      'numeroafiliado',
-      'numerodeafiliado',
-      'nroafiliado',
-      'afiliado',
-      'affiliateNumber',
-    ].map(normKey);
-    const sources = [patientObj, patientObj.fields || {}];
-    for (const src of sources) {
-      for (const [k, v] of Object.entries(src || {})) {
-        if (possibleKeys.includes(normKey(k))) {
-          return v;
-        }
-      }
-    }
-    return undefined;
+  // Numero de Afiliado: levantarlo directamente como cualquier otro campo
+  // Intentamos en varios lugares comunes por si viene dentro de `fields`
+  const getAffiliateNumber = (p) => {
+    if (!p) return undefined;
+    const v =
+      p.numeroAfiliado ??
+      p['Numero Afiliado'] ??
+      p['Número Afiliado'] ??
+      p.fields?.numeroAfiliado ??
+      p.fields?.['Numero Afiliado'] ??
+      p.fields?.['Número Afiliado'];
+    return v != null && v !== '' ? String(v) : undefined;
   };
   const affiliateNumber = getAffiliateNumber(patient) ?? '-';
 

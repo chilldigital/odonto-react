@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 import { URL_CREATE_PATIENT } from '../config/n8n';
 
@@ -9,6 +9,15 @@ import { URL_CREATE_PATIENT } from '../config/n8n';
  */
 export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
   const openFlag = open ?? isOpen; // soporta ambas props
+
+  // Evita envíos duplicados (doble click, StrictMode o re-montajes)
+  const creatingRef = useRef(false);
+  useEffect(() => {
+    return () => {
+      creatingRef.current = false;
+      if (window) window.__patientCreateLock = false;
+    };
+  }, []);
 
   const [form, setForm] = useState({
     nombre: '',
@@ -48,23 +57,30 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (submitting) return; // evita doble click
+    if (submitting || creatingRef.current || (typeof window !== 'undefined' && window.__patientCreateLock)) return;
     setSubmitting(true);
+    creatingRef.current = true;
+    if (typeof window !== 'undefined') window.__patientCreateLock = true;
 
-    // Cerrar el modal inmediatamente para una UX ágil
-    onClose?.();
-
-    // Preparamos payload (se envía en background)
-    const formData = new FormData();
-    formData.append('nombre', form.nombre || '');
-    formData.append('telefono', form.telefono || '');
-    formData.append('email', form.email || '');
-    formData.append('obraSocial', form.obraSocial || '');
-    formData.append('numeroafiliado', form.numeroAfiliado || '');
-    formData.append('fechanacimiento', form.fechaNacimiento || '');
-    formData.append('notas', form.notas || '');
+    // Construimos el payload a enviar al webhook (JSON)
+    const tempId = crypto?.randomUUID?.() || String(Date.now());
+    const payload = {
+      id: tempId,
+      idempotencyKey: tempId,
+      nombre: form.nombre || '',
+      telefono: form.telefono || '',
+      email: form.email || '',
+      obraSocial: form.obraSocial || '',
+      numeroAfiliado: form.numeroAfiliado || '',
+      fechaNacimiento: form.fechaNacimiento || '',
+      notas: form.notas || '',
+      // campos opcionales para futuros usos
+      historiaClinica: '',
+      ultimaVisita: '',
+    };
     if (form.historiaClinicaFile) {
-      formData.append('clinicalRecord', form.historiaClinicaFile);
+      payload.hasFile = true;
+      payload.historiaClinicaNombre = form.historiaClinicaFile.name;
     }
 
     try {
@@ -73,41 +89,61 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
       if (URL_CREATE_PATIENT) {
         const res = await fetch(URL_CREATE_PATIENT, {
           method: 'POST',
-          body: formData,
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Idempotency-Key': tempId,
+            'Cache-Control': 'no-store',
+          },
+          body: JSON.stringify(payload),
         });
         if (!res.ok) {
           throw new Error(`Webhook create-patient respondió ${res.status}`);
         }
         const data = await res.json();
         created = {
-          id: data.id || data.recordId || data.ID || crypto.randomUUID?.() || String(Math.random()),
-          nombre: data.nombre || data.name || form.nombre,
-          obraSocial: data.obraSocial || data.insurance || form.obraSocial || '',
-          historiaClinica: data.historiaClinica || data.clinicalRecord || '',
-          ultimaVisita: data.ultimaVisita || data.lastVisit || '',
+          id: data.id || payload.id,
+          nombre: data.nombre ?? payload.nombre,
+          obraSocial: data.obraSocial ?? payload.obraSocial,
+          telefono: data.telefono ?? payload.telefono,
+          email: data.email ?? payload.email,
+          numeroAfiliado: data.numeroAfiliado ?? payload.numeroAfiliado,
+          fechaNacimiento: data.fechaNacimiento ?? payload.fechaNacimiento,
+          notas: data.notas ?? payload.notas,
+          historiaClinica: data.historiaClinica ?? '',
+          ultimaVisita: data.ultimaVisita ?? '',
         };
       } else {
         created = {
           id: crypto.randomUUID?.() || String(Math.random()),
           nombre: form.nombre,
           obraSocial: form.obraSocial,
+          telefono: form.telefono,
+          email: form.email,
+          numeroAfiliado: form.numeroAfiliado,
+          fechaNacimiento: form.fechaNacimiento,
+          notas: form.notas,
           historiaClinica: '',
           ultimaVisita: '',
         };
       }
 
-      // Informamos a la tabla para que se refresque / inserte el nuevo registro
-      window.dispatchEvent(new CustomEvent('patient:created', { detail: created }));
+      // Pedimos recargar pacientes desde el backend (sin insertar optimista)
+      window.dispatchEvent(new Event('patients:refresh'));
 
+      // Si el padre implementa onCreate, lo invocamos sin payload
+      // (la vista debe escuchar `patients:refresh` y rehacer el fetch)
       if (typeof onCreate === 'function') {
-        await onCreate(created);
+        await onCreate(null);
       }
 
+      onClose?.();
       resetForm();
     } catch (err) {
       console.error('Error al crear paciente', err);
       // Podrías disparar un toast/alert y, si implementás optimismo, reversionar aquí
     } finally {
+      creatingRef.current = false;
+      if (typeof window !== 'undefined') window.__patientCreateLock = false;
       setSubmitting(false);
     }
   };
@@ -119,7 +155,7 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
       {/* Overlay */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={submitting ? undefined : onClose}
       />
 
       {/* Contenedor */}
