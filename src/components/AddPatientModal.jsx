@@ -56,13 +56,13 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
 
     // Preparamos payload (se envía en background)
     const formData = new FormData();
-    formData.append('Nombre', form.nombre || '');
-    formData.append('Telefono', form.telefono || '');
-    formData.append('Email', form.email || '');
-    formData.append('ObraSocial', form.obraSocial || '');
-    formData.append('NumeroAfiliado', form.numeroAfiliado || '');
-    formData.append('FechaNacimiento', form.fechaNacimiento || '');
-    formData.append('Notas', form.notas || '');
+    formData.append('nombre', form.nombre || '');
+    formData.append('telefono', form.telefono || '');
+    formData.append('email', form.email || '');
+    formData.append('obraSocial', form.obraSocial || '');
+    formData.append('numeroafiliado', form.numeroAfiliado || '');
+    formData.append('fechanacimiento', form.fechaNacimiento || '');
+    formData.append('notas', form.notas || '');
     if (form.historiaClinicaFile) {
       formData.append('clinicalRecord', form.historiaClinicaFile);
     }
