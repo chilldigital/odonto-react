@@ -158,37 +158,110 @@ function AuthedApp({ onLogout }) {
   const openAddPatient = useCallback(() => setShowAddModal(true), []);
   const closeAddPatient = useCallback(() => setShowAddModal(false), []);
 
-  const handleDeletePatient = useCallback(async (patient) => {
-    try {
-      const id = patient?.id || patient?.airtableId || patient?.recordId || patient?._id || (patient?.fields && patient.fields.id) || '';
-      const key = id || `${(patient?.nombre || '').trim()}-${(patient?.telefono || '').trim()}`;
-
-      // Optimistic: ocultar de la lista inmediatamente
-      setLocallyDeleted((prev) => (prev.includes(key) ? prev : [...prev, key]));
-
-      // Llamada a n8n webhook
-      await fetch(URL_DELETE_PATIENT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, nombre: patient?.nombre || '' }),
-      });
-
-      // Revalidar contra la fuente de verdad
-      await refreshPatients();
-
-      // Limpieza del marcador local
-      setLocallyDeleted((prev) => prev.filter((k) => k !== key));
-    } catch (err) {
-      console.error('Error deleting patient:', err);
-      // Revertir el ocultamiento si falló
-      setLocallyDeleted((prev) => prev.filter((k) => {
-        const id = patient?.id || patient?.airtableId || patient?.recordId || patient?._id || (patient?.fields && patient.fields.id) || '';
-        const key = id || `${(patient?.nombre || '').trim()}-${(patient?.telefono || '').trim()}`;
-        return k !== key;
-      }));
-      alert('No se pudo eliminar el paciente. Intenta nuevamente.');
+const handleDeletePatient = useCallback(async (patientOrId) => {
+  try {
+    let patient, id, nombre;
+    
+    // Caso 1: Se pasó solo el ID como string
+    if (typeof patientOrId === 'string') {
+      id = patientOrId;
+      // Buscar el paciente completo en la lista usando el ID
+      patient = normalizedPatients.find(p => 
+        p?.id === id || 
+        p?.airtableId === id || 
+        p?.recordId === id ||
+        p?._id === id ||
+        p?.fields?.id === id
+      );
+      
+      if (patient) {
+        nombre = patient?.nombre || patient?.name || patient?.fields?.nombre || patient?.fields?.Name || '';
+      } else {
+        nombre = 'Paciente no encontrado';
+      }
+    } 
+    // Caso 2: Se pasó el objeto completo del paciente
+    else if (typeof patientOrId === 'object' && patientOrId !== null) {
+      patient = patientOrId;
+      
+      // Extraer ID del objeto
+      const possibleIds = [
+        patient?.id,
+        patient?.airtableId, 
+        patient?.recordId,
+        patient?._id,
+        patient?.fields?.id,
+      ];
+      
+      id = possibleIds.find(id => id && id.trim() !== '') || '';
+      
+      // Extraer nombre del objeto
+      const possibleNames = [
+        patient?.nombre,
+        patient?.name,
+        patient?.fields?.nombre,
+        patient?.fields?.Name,
+      ];
+      
+      nombre = possibleNames.find(name => name && name.trim() !== '') || '';
+    } else {
+      throw new Error('Parámetro inválido: debe ser string (ID) o objeto (paciente)');
     }
-  }, [refreshPatients]);
+
+    // Validación antes de enviar
+    if (!id) {
+      alert("Error: No se pudo identificar el paciente a eliminar");
+      return;
+    }
+
+    // Confirmar eliminación
+    const confirmMessage = nombre ? 
+      `¿Estás seguro de eliminar al paciente "${nombre}"?` : 
+      `¿Estás seguro de eliminar este paciente?`;
+      
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    const key = id;
+
+    // Optimistic: ocultar de la lista inmediatamente
+    setLocallyDeleted((prev) => (prev.includes(key) ? prev : [...prev, key]));
+
+    // Llamada a n8n webhook
+    const response = await fetch(URL_DELETE_PATIENT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        id,
+        airtableId: id, 
+        nombre: nombre || 'Sin nombre',
+        action: 'delete',
+        timestamp: new Date().toISOString()
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    // Revalidar contra la fuente de verdad
+    await refreshPatients();
+
+    // Limpieza del marcador local
+    setLocallyDeleted((prev) => prev.filter((k) => k !== key));
+
+  } catch (err) {
+    console.error('Error deleting patient:', err);
+    
+    // Revertir el ocultamiento si falló
+    const key = typeof patientOrId === 'string' ? patientOrId : 
+      (patientOrId?.id || patientOrId?.airtableId || '');
+      
+    setLocallyDeleted((prev) => prev.filter((k) => k !== key));
+    alert(`Error eliminando paciente: ${err.message}`);
+  }
+}, [refreshPatients, normalizedPatients]);
 
   // Crear sin insertar nada manualmente en el array local -> evito duplicados
   const onCreatedPatient = useCallback(async (payload) => {
