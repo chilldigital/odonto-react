@@ -115,7 +115,7 @@ export default function TurnosView() {
   const goPrev = () => setBaseDate(prev => mode === 'dia' ? addDays(prev,-1) : addDays(prev,-7));
   const goNext = () => setBaseDate(prev => mode === 'dia' ? addDays(prev, 1) : addDays(prev, 7));
 
-  const calLink = process.env.REACT_APP_CAL_LINK || 'https://cal.com/';
+  const calLink = process.env.REACT_APP_CAL_LINK || 'https://cal.com/chill-digital';
 
   return (
     <div className="p-4 lg:p-8 bg-gray-50 min-h-screen">
