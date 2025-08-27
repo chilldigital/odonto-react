@@ -5,3 +5,4 @@ export const URL_SEND_MESSAGE  = `${N8N_BASE}webhook/send-message`;
 export const URL_CREATE_PATIENT = `${N8N_BASE}webhook/create-patient`;
 // ✨ Nuevo endpoint para obtener todos los pacientes
 export const URL_GET_PATIENTS = `${N8N_BASE}webhook/get-patients`;
+export const URL_DELETE_PATIENT = `${N8N_BASE}webhook/delete-patient`;

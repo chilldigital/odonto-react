@@ -8,16 +8,18 @@ export default function PacientesView({
   onAddPatient,
   onViewPatient,
   onOpenRecord,
+  onDeletePatient,
   patients = [],
   loading = false
 }) {
-  const filteredPacientes = useMemo(
-    () =>
-      patients.filter((p) =>
-        (p?.nombre || '').toLowerCase().includes((searchTerm || '').toLowerCase())
-      ),
-    [searchTerm, patients]
-  );
+  const collator = useMemo(() => new Intl.Collator('es', { sensitivity: 'base' }), []);
+  const filteredPacientes = useMemo(() => {
+    const term = (searchTerm || '').toLowerCase();
+    return patients
+      .filter((p) => (p?.nombre || '').toLowerCase().includes(term))
+      .slice()
+      .sort((a, b) => collator.compare(a?.nombre || '', b?.nombre || ''));
+  }, [searchTerm, patients, collator]);
 
   return (
     <div className="p-4 lg:p-8 bg-gray-50 min-h-screen">
@@ -25,9 +27,6 @@ export default function PacientesView({
         <div className="p-4 lg:p-6 border-b flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
           <h2 className="text-lg font-semibold text-gray-800">
             Pacientes
-            {loading && (
-              <span className="ml-2 text-sm text-gray-500">(Cargando...)</span>
-            )}
           </h2>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
             <SearchInput
@@ -55,6 +54,7 @@ export default function PacientesView({
             patients={filteredPacientes}
             onView={onViewPatient}
             onOpenRecord={onOpenRecord}
+            onDelete={onDeletePatient}
           />
         )}
       </div>

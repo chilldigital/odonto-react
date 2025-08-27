@@ -1,7 +1,8 @@
-import React from 'react';
-import { Eye } from 'lucide-react';
+import React, { useState } from 'react';
+import { Eye, XCircle } from 'lucide-react';
 
-export default React.memo(function PatientTable({ patients, onView, onOpenRecord }) {
+export default React.memo(function PatientTable({ patients, onView, onOpenRecord, onDelete }) {
+  const [pendingDelete, setPendingDelete] = useState(null);
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-full">
@@ -38,11 +39,50 @@ export default React.memo(function PatientTable({ patients, onView, onOpenRecord
                 >
                   <Eye size={16} />
                 </button>
+                <button
+                  className="ml-3 text-red-500 hover:text-red-600"
+                  onClick={() => setPendingDelete(paciente)}
+                  aria-label={`Eliminar ${paciente.nombre}`}
+                >
+                  <XCircle size={18} />
+                </button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      {pendingDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-center justify-center text-red-600 mb-3">
+              <XCircle size={40} />
+            </div>
+            <h3 className="text-center text-gray-900 font-semibold mb-2">¿Eliminar paciente?</h3>
+            <p className="text-center text-gray-600 text-sm mb-6">
+              ¿Estás seguro de eliminar a <span className="font-medium">{pendingDelete?.nombre}</span>? Esta acción no se puede deshacer.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setPendingDelete(null)}
+                className="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+              >
+                No, cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onDelete && onDelete(pendingDelete);
+                  setPendingDelete(null);
+                }}
+                className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700"
+              >
+                Sí, eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 });

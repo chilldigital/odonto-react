@@ -3,7 +3,7 @@ import ModalShell from './ModalShell';
 import { Phone, Mail, MapPin } from 'lucide-react';
 import { initials } from '../utils/helpers';
 
-export default function PatientProfileModal({ open, patient, onClose, onEdit, onMessage }) {
+export default function PatientProfileModal({ open, patient, onClose, onEdit, onDelete }) {
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
     if (open) window.addEventListener('keydown', onKey);
@@ -49,11 +49,17 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
       </div>
       <hr className="my-6" />
       <div className="grid grid-cols-2 gap-3">
-        <button className="px-4 py-2 rounded-lg border text-gray-700 hover:bg-gray-50" onClick={() => onEdit && onEdit(patient)}>
-          Editar
+        <button
+          className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+          onClick={() => onDelete && onDelete(patient)}
+        >
+          Eliminar
         </button>
-        <button className="px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700" onClick={() => onMessage && onMessage(patient)}>
-          Mensaje
+        <button
+          className="px-4 py-2 rounded-lg bg-gray-200 text-black hover:bg-gray-300 font-semibold"
+          onClick={() => onEdit && onEdit(patient)}
+        >
+          Editar
         </button>
       </div>
     </ModalShell>

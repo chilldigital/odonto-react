@@ -13,17 +13,69 @@ export default function DashboardView({
   onViewPatient, 
   onOpenRecord, 
   patients = [],
+  latestPatients = [],
   loading = false 
 }) {
   const filteredPacientes = useMemo(() => {
-    if (!dashboardSearchTerm.trim()) return patients.slice(0, 4);
-    return patients.filter(p => 
-      p.nombre?.toLowerCase().includes(dashboardSearchTerm.toLowerCase())
-    ).slice(0, 4);
-  }, [dashboardSearchTerm, patients]);
+    const term = (dashboardSearchTerm || '').trim().toLowerCase();
+
+    function toTs(raw) {
+      if (!raw) return 0;
+      if (typeof raw === 'number') return raw;
+      if (raw instanceof Date) return raw.getTime();
+      if (typeof raw === 'string') {
+        const isoTs = Date.parse(raw);
+        if (!Number.isNaN(isoTs)) return isoTs;
+        const m = raw.replace(/\s/g, '').match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
+        if (m) {
+          const d = parseInt(m[1], 10);
+          const mo = parseInt(m[2], 10);
+          const y = m[3];
+          const year = y.length === 2 ? 2000 + parseInt(y, 10) : parseInt(y, 10);
+          return new Date(year, mo - 1, d).getTime();
+        }
+      }
+      return 0;
+    }
+
+    function ts(p) {
+      if (!p) return 0;
+      if (typeof p._createdAt === 'number') return p._createdAt; // preferimos timestamp normalizado desde App
+      let raw = null;
+      if (p.fechaRegistro) raw = p.fechaRegistro;
+      else if (p['Fecha Registro']) raw = p['Fecha Registro'];
+      else if (p.createdTime) raw = p.createdTime;
+      else if (p.created_at) raw = p.created_at;
+      else if (p.createdAt) raw = p.createdAt;
+      else if (p.fields) {
+        if (p.fields['Fecha Registro']) raw = p.fields['Fecha Registro'];
+        else if (p.fields.createdTime) raw = p.fields.createdTime;
+      }
+      return toTs(raw);
+    }
+
+    const base = patients ? patients.slice() : [];
+
+    // Sin búsqueda: usamos latestPatients si viene desde App ya ordenado; si no, ordenamos por fecha desc
+    if (!term) {
+      if (latestPatients && latestPatients.length) {
+        return latestPatients.slice(0, 4);
+      }
+      return base.sort((a, b) => ts(b) - ts(a)).slice(0, 4);
+    }
+
+    // Con búsqueda: filtramos y ordenamos por fecha desc para mantener la noción de "más recientes"
+    return base
+      .filter((p) => {
+        const name = (p && p.nombre) ? p.nombre : '';
+        return name.toLowerCase().indexOf(term) !== -1;
+      })
+      .sort((a, b) => ts(b) - ts(a))
+      .slice(0, 4);
+  }, [dashboardSearchTerm, patients, latestPatients]);
 
   const showViewAll = useMemo(
-    () => !dashboardSearchTerm.trim() && patients.length > 4,
+    () => !(dashboardSearchTerm || '').trim() && patients.length > 4,
     [dashboardSearchTerm, patients]
   );
 
@@ -78,9 +130,6 @@ export default function DashboardView({
             <div className="flex items-center gap-3">
               <h2 className="text-lg font-semibold text-gray-800">
                 Últimos pacientes
-                {loading && (
-                  <span className="ml-2 text-sm text-gray-500">(Cargando...)</span>
-                )}
               </h2>
               {showViewAll && (
                 <Link

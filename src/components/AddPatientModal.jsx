@@ -21,6 +21,8 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
     historiaClinicaFile: null,
   });
 
+  const [submitting, setSubmitting] = useState(false);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -46,8 +48,13 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return; // evita doble click
+    setSubmitting(true);
 
-    // Si hay endpoint de n8n, enviamos allí; si no, usamos onCreate como fallback.
+    // Cerrar el modal inmediatamente para una UX ágil
+    onClose?.();
+
+    // Preparamos payload (se envía en background)
     const formData = new FormData();
     formData.append('Nombre', form.nombre || '');
     formData.append('Telefono', form.telefono || '');
@@ -57,7 +64,6 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
     formData.append('FechaNacimiento', form.fechaNacimiento || '');
     formData.append('Notas', form.notas || '');
     if (form.historiaClinicaFile) {
-      // nombre de campo estándar para n8n
       formData.append('clinicalRecord', form.historiaClinicaFile);
     }
 
@@ -73,7 +79,6 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
           throw new Error(`Webhook create-patient respondió ${res.status}`);
         }
         const data = await res.json();
-        // Mapeo defensivo: tomamos lo que venga de n8n/Airtable y caemos a lo enviado si falta algo
         created = {
           id: data.id || data.recordId || data.ID || crypto.randomUUID?.() || String(Math.random()),
           nombre: data.nombre || data.name || form.nombre,
@@ -82,7 +87,6 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
           ultimaVisita: data.ultimaVisita || data.lastVisit || '',
         };
       } else {
-        // Fallback local si aún no hay backend configurado
         created = {
           id: crypto.randomUUID?.() || String(Math.random()),
           nombre: form.nombre,
@@ -92,19 +96,19 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
         };
       }
 
-      // Notificamos a la vista de Pacientes para que inserte el nuevo paciente en la tabla
+      // Informamos a la tabla para que se refresque / inserte el nuevo registro
       window.dispatchEvent(new CustomEvent('patient:created', { detail: created }));
 
-      // Si el padre quiere además manejarlo por callback, lo llamamos
       if (typeof onCreate === 'function') {
         await onCreate(created);
       }
 
       resetForm();
-      onClose?.();
     } catch (err) {
       console.error('Error al crear paciente', err);
-      // Podrías mostrar un toast aquí si tenés sistema de notificaciones
+      // Podrías disparar un toast/alert y, si implementás optimismo, reversionar aquí
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -253,9 +257,11 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
               </button>
               <button
                 type="submit"
-                className="rounded-md bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-700"
+                disabled={submitting}
+                aria-busy={submitting}
+                className={`rounded-md px-4 py-2 font-medium text-white ${submitting ? 'bg-emerald-600/70 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'}`}
               >
-                Crear
+                {submitting ? 'Creando…' : 'Crear'}
               </button>
             </div>
           </form>
