@@ -1,8 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Eye, XCircle } from 'lucide-react';
 
 export default React.memo(function PatientTable({ patients, onView, onOpenRecord, onDelete }) {
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Limpiar el estado cuando cambie la lista de pacientes
+  useEffect(() => {
+    if (pendingDelete && !patients.find(p => p.id === pendingDelete.id)) {
+      setPendingDelete(null);
+      setIsDeleting(false);
+    }
+  }, [patients, pendingDelete]);
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-full">
@@ -66,20 +75,33 @@ export default React.memo(function PatientTable({ patients, onView, onOpenRecord
             <div className="flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => setPendingDelete(null)}
-                className="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                onClick={() => {
+                  setPendingDelete(null);
+                  setIsDeleting(false);
+                }}
+                className="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                disabled={isDeleting}
               >
                 No, cancelar
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  onDelete && onDelete(pendingDelete);
-                  setPendingDelete(null);
+                onClick={async () => {
+                  if (isDeleting) return;
+                  setIsDeleting(true);
+                  try {
+                    onDelete && await onDelete(pendingDelete);
+                    setPendingDelete(null);
+                  } catch (error) {
+                    console.error('Error eliminando paciente:', error);
+                  } finally {
+                    setIsDeleting(false);
+                  }
                 }}
-                className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700"
+                className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isDeleting}
               >
-                Sí, eliminar
+                {isDeleting ? 'Eliminando...' : 'Sí, eliminar'}
               </button>
             </div>
           </div>

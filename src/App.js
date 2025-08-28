@@ -158,75 +158,32 @@ function AuthedApp({ onLogout }) {
   const openAddPatient = useCallback(() => setShowAddModal(true), []);
   const closeAddPatient = useCallback(() => setShowAddModal(false), []);
 
-const handleDeletePatient = useCallback(async (patientOrId) => {
+const handleDeletePatient = useCallback(async (patientData) => {
   try {
-    let patient, id, nombre;
+    // Normalizar datos del paciente
+    const patient = typeof patientData === 'object' ? patientData : 
+                    normalizedPatients.find(p => 
+                      p?.id === patientData || 
+                      p?.airtableId === patientData || 
+                      p?.recordId === patientData
+                    );
     
-    // Caso 1: Se pasó solo el ID como string
-    if (typeof patientOrId === 'string') {
-      id = patientOrId;
-      // Buscar el paciente completo en la lista usando el ID
-      patient = normalizedPatients.find(p => 
-        p?.id === id || 
-        p?.airtableId === id || 
-        p?.recordId === id ||
-        p?._id === id ||
-        p?.fields?.id === id
-      );
-      
-      if (patient) {
-        nombre = patient?.nombre || patient?.name || patient?.fields?.nombre || patient?.fields?.Name || '';
-      } else {
-        nombre = 'Paciente no encontrado';
-      }
-    } 
-    // Caso 2: Se pasó el objeto completo del paciente
-    else if (typeof patientOrId === 'object' && patientOrId !== null) {
-      patient = patientOrId;
-      
-      // Extraer ID del objeto
-      const possibleIds = [
-        patient?.id,
-        patient?.airtableId, 
-        patient?.recordId,
-        patient?._id,
-        patient?.fields?.id,
-      ];
-      
-      id = possibleIds.find(id => id && id.trim() !== '') || '';
-      
-      // Extraer nombre del objeto
-      const possibleNames = [
-        patient?.nombre,
-        patient?.name,
-        patient?.fields?.nombre,
-        patient?.fields?.Name,
-      ];
-      
-      nombre = possibleNames.find(name => name && name.trim() !== '') || '';
-    } else {
-      throw new Error('Parámetro inválido: debe ser string (ID) o objeto (paciente)');
+    if (!patient) {
+      throw new Error('No se pudo encontrar el paciente');
     }
 
-    // Validación antes de enviar
+    // Obtener ID y nombre
+    const id = patient?.id || patient?.airtableId || patient?.recordId || patient?._id;
+    const nombre = patient?.nombre || patient?.name || 'Paciente';
+    
     if (!id) {
-      alert("Error: No se pudo identificar el paciente a eliminar");
-      return;
+      throw new Error('No se pudo identificar el paciente');
     }
 
-    // Confirmar eliminación
-    const confirmMessage = nombre ? 
-      `¿Estás seguro de eliminar al paciente "${nombre}"?` : 
-      `¿Estás seguro de eliminar este paciente?`;
-      
-    if (!confirm(confirmMessage)) {
-      return;
-    }
+    console.log(`Eliminando paciente: ${nombre} (${id})`);
 
-    const key = id;
-
-    // Optimistic: ocultar de la lista inmediatamente
-    setLocallyDeleted((prev) => (prev.includes(key) ? prev : [...prev, key]));
+    // Optimistic: ocultar inmediatamente
+    setLocallyDeleted(prev => [...prev, id]);
 
     // Llamada a n8n webhook
     const response = await fetch(URL_DELETE_PATIENT, {
@@ -234,32 +191,37 @@ const handleDeletePatient = useCallback(async (patientOrId) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         id,
-        airtableId: id, 
-        nombre: nombre || 'Sin nombre',
-        action: 'delete',
+        airtableId: id,
+        nombre,
         timestamp: new Date().toISOString()
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(`Error del servidor: ${response.status}`);
     }
 
-    // Revalidar contra la fuente de verdad
-    await refreshPatients();
+    console.log(`Paciente ${nombre} eliminado exitosamente`);
 
-    // Limpieza del marcador local
-    setLocallyDeleted((prev) => prev.filter((k) => k !== key));
+    // Refrescar lista
+    await refreshPatients();
+    
+    // Limpiar estado local
+    setLocallyDeleted(prev => prev.filter(k => k !== id));
 
   } catch (err) {
-    console.error('Error deleting patient:', err);
+    console.error('Error eliminando paciente:', err);
     
-    // Revertir el ocultamiento si falló
-    const key = typeof patientOrId === 'string' ? patientOrId : 
-      (patientOrId?.id || patientOrId?.airtableId || '');
-      
-    setLocallyDeleted((prev) => prev.filter((k) => k !== key));
-    alert(`Error eliminando paciente: ${err.message}`);
+    // Revertir cambios en caso de error
+    const id = typeof patientData === 'string' ? patientData : 
+               (patientData?.id || patientData?.airtableId);
+    
+    if (id) {
+      setLocallyDeleted(prev => prev.filter(k => k !== id));
+    }
+    
+    // No mostrar alert aquí, dejar que el componente que llama maneje el error
+    throw err;
   }
 }, [refreshPatients, normalizedPatients]);
   

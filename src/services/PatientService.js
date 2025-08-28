@@ -59,11 +59,13 @@ export class PatientService {
         
         const formData = new FormData();
         formData.append('nombre', patientData.nombre || '');
+        formData.append('dni', patientData.dni || '');
         formData.append('telefono', patientData.telefono || '');
         formData.append('email', patientData.email || '');
         formData.append('obraSocial', patientData.obraSocial || '');
         formData.append('numeroafiliado', patientData.numeroAfiliado || ''); // lowercase para N8N
         formData.append('fechanacimiento', patientData.fechaNacimiento || ''); // lowercase para N8N
+        formData.append('alergias', patientData.alergias || 'Ninguna');
         formData.append('notas', patientData.notas || '');
         formData.append('clinicalRecord', patientData.historiaClinicaFile); // el archivo
 
@@ -84,11 +86,13 @@ export class PatientService {
           },
           body: JSON.stringify({
             nombre: patientData.nombre || '',
+            dni: patientData.dni || '',
             telefono: patientData.telefono || '',
             email: patientData.email || '',
             obraSocial: patientData.obraSocial || '',
             numeroAfiliado: patientData.numeroAfiliado || '',
             fechaNacimiento: patientData.fechaNacimiento || '',
+            alergias: patientData.alergias || 'Ninguna',
             notas: patientData.notas || '',
           })
         };
@@ -108,11 +112,13 @@ export class PatientService {
       const normalizedPatient = {
         id: responseData.id || responseData.recordId || responseData.ID || patientData.id,
         nombre: responseData.nombre || responseData.name || patientData.nombre,
+        dni: responseData.dni || responseData.DNI || patientData.dni,
         telefono: responseData.telefono || responseData.phone || patientData.telefono,
         email: responseData.email || patientData.email,
         obraSocial: responseData.obraSocial || responseData.insurance || patientData.obraSocial,
         numeroAfiliado: responseData.numeroAfiliado || responseData.affiliateNumber || patientData.numeroAfiliado,
         fechaNacimiento: responseData.fechaNacimiento || responseData.birthDate || patientData.fechaNacimiento,
+        alergias: responseData.alergias || responseData.allergies || patientData.alergias || 'Ninguna',
         notas: responseData.notas || responseData.notes || patientData.notas,
         historiaClinica: responseData.historiaClinica || responseData.clinicalRecord || '',
         ultimaVisita: responseData.ultimaVisita || responseData.lastVisit || '',

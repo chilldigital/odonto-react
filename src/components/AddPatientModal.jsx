@@ -12,11 +12,13 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
 
   const [form, setForm] = useState({
     nombre: '',
+    dni: '',
     telefono: '',
     email: '',
     obraSocial: '',
     numeroAfiliado: '',
     fechaNacimiento: '',
+    alergias: 'Ninguna',
     notas: '',
     historiaClinicaFile: null,
   });
@@ -42,11 +44,13 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
   const resetForm = () => {
     setForm({
       nombre: '',
+      dni: '',
       telefono: '',
       email: '',
       obraSocial: '',
       numeroAfiliado: '',
       fechaNacimiento: '',
+      alergias: 'Ninguna',
       notas: '',
       historiaClinicaFile: null,
     });
@@ -71,11 +75,13 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
       const patientData = {
         id: crypto?.randomUUID?.() || String(Date.now()),
         nombre: form.nombre || '',
+        dni: form.dni || '',
         telefono: form.telefono || '',
         email: form.email || '',
         obraSocial: form.obraSocial || '',
         numeroAfiliado: form.numeroAfiliado || '',
         fechaNacimiento: form.fechaNacimiento || '',
+        alergias: form.alergias || 'Ninguna',
         notas: form.notas || '',
         historiaClinica: '',
         ultimaVisita: '',
@@ -170,6 +176,19 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
               />
             </div>
 
+            {/* DNI */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">DNI</label>
+              <input
+                name="dni"
+                value={form.dni}
+                onChange={handleChange}
+                type="text"
+                placeholder="Ej: 12345678"
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
             {/* Teléfono */}
             <div>
               <label className="block text-sm font-medium text-gray-700">Teléfono</label>
@@ -230,6 +249,19 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
                 value={form.fechaNacimiento}
                 onChange={handleChange}
                 type="date"
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            {/* Alergias */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Alergias</label>
+              <input
+                name="alergias"
+                value={form.alergias}
+                onChange={handleChange}
+                type="text"
+                placeholder="Ej: Ninguna / Penicilina, Polen..."
                 className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>

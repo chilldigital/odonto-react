@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ModalShell from './ModalShell';
-import { Phone, Mail, Hash, FileText, Trash2 } from 'lucide-react';
+import { Phone, Mail, Hash, FileText, Trash2, Calendar, AlertTriangle, User } from 'lucide-react';
 import { initials } from '../utils/helpers';
 
 export default function PatientProfileModal({ open, patient, onClose, onEdit, onDelete }) {
@@ -15,20 +15,36 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
 
   if (!open || !patient) return null;
 
-  // Numero de Afiliado: levantarlo directamente como cualquier otro campo
-  // Intentamos en varios lugares comunes por si viene dentro de `fields`
-  const getAffiliateNumber = (p) => {
+  // Helper para obtener campos con múltiples posibles nombres
+  const getField = (p, fieldNames) => {
     if (!p) return undefined;
-    const v =
-      p.numeroAfiliado ??
-      p['Numero Afiliado'] ??
-      p['Número Afiliado'] ??
-      p.fields?.numeroAfiliado ??
-      p.fields?.['Numero Afiliado'] ??
-      p.fields?.['Número Afiliado'];
-    return v != null && v !== '' ? String(v) : undefined;
+    for (const fieldName of fieldNames) {
+      const value = p[fieldName] ?? p.fields?.[fieldName];
+      if (value != null && value !== '') return String(value);
+    }
+    return undefined;
   };
-  const affiliateNumber = getAffiliateNumber(patient) ?? '-';
+
+  const affiliateNumber = getField(patient, ['numeroAfiliado', 'Numero Afiliado', 'Número Afiliado']) ?? '-';
+  const dni = getField(patient, ['dni', 'DNI', 'Dni']) ?? '-';
+  const fechaNacimiento = getField(patient, ['fechaNacimiento', 'fecha_nacimiento', 'birthDate']) ?? '-';
+  const alergias = getField(patient, ['alergias', 'Alergias', 'allergies']) ?? 'Ninguna';
+
+  // Formatear fecha si existe
+  const formatDate = (dateStr) => {
+    if (!dateStr || dateStr === '-') return '-';
+    try {
+      const date = new Date(dateStr);
+      if (!isNaN(date)) {
+        return date.toLocaleDateString('es-AR', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+      }
+    } catch (e) {}
+    return dateStr;
+  };
 
   function handleDeleteClick() {
     // open local confirm modal
@@ -70,6 +86,13 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
       <hr className="my-4" />
       <div className="space-y-4">
         <div className="flex items-start">
+          <User className="mt-1 mr-3 text-gray-400" size={18} />
+          <div>
+            <div className="text-sm text-gray-500">DNI</div>
+            <div className="text-sm text-gray-900">{dni}</div>
+          </div>
+        </div>
+        <div className="flex items-start">
           <Phone className="mt-1 mr-3 text-gray-400" size={18} />
           <div>
             <div className="text-sm text-gray-500">Teléfono</div>
@@ -90,6 +113,20 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
             <div className="text-sm text-gray-900">
               {affiliateNumber}
             </div>
+          </div>
+        </div>
+        <div className="flex items-start">
+          <Calendar className="mt-1 mr-3 text-gray-400" size={18} />
+          <div>
+            <div className="text-sm text-gray-500">Fecha de Nacimiento</div>
+            <div className="text-sm text-gray-900">{formatDate(fechaNacimiento)}</div>
+          </div>
+        </div>
+        <div className="flex items-start">
+          <AlertTriangle className="mt-1 mr-3 text-gray-400" size={18} />
+          <div>
+            <div className="text-sm text-gray-500">Alergias</div>
+            <div className="text-sm text-gray-900">{alergias}</div>
           </div>
         </div>
         <div className="flex items-start">
