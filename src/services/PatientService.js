@@ -11,12 +11,12 @@ export class PatientService {
    */
   static async fetchAllPatients() {
     try {
+      console.log('📥 Obteniendo pacientes desde N8N...');
+      
       const response = await fetch(URL_GET_PATIENTS, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          // Opcional: agregar token de seguridad
-          // 'x-api-key': process.env.REACT_APP_N8N_TOKEN
         }
       });
 
@@ -27,35 +27,111 @@ export class PatientService {
       const data = await response.json();
       
       // El webhook debería devolver: { patients: [...] }
-      return data.patients || [];
+      const patients = data.patients || [];
+      console.log(`✅ ${patients.length} pacientes obtenidos`);
+      
+      return patients;
     } catch (error) {
-      console.error('Error al obtener pacientes:', error);
+      console.error('❌ Error al obtener pacientes:', error);
       throw error;
     }
   }
 
   /**
    * Crear un nuevo paciente
-   * @param {Object} patientData - Datos del paciente
+   * *** ACTUALIZADO: Ahora soporta archivos ***
+   * @param {Object} patientData - Datos del paciente (puede incluir historiaClinicaFile)
    * @returns {Promise<Object>} Paciente creado
    */
   static async createPatient(patientData) {
     try {
-      const response = await fetch(URL_CREATE_PATIENT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(patientData)
+      console.log('📤 Creando paciente en N8N...', {
+        name: patientData.nombre,
+        hasFile: !!patientData.historiaClinicaFile
       });
+
+      let requestOptions;
+
+      // *** LÓGICA CONDICIONAL: ARCHIVO vs JSON ***
+      if (patientData.historiaClinicaFile) {
+        // Si hay archivo, usar FormData
+        console.log('📁 Usando FormData para archivo:', patientData.fileName);
+        
+        const formData = new FormData();
+        formData.append('nombre', patientData.nombre || '');
+        formData.append('telefono', patientData.telefono || '');
+        formData.append('email', patientData.email || '');
+        formData.append('obraSocial', patientData.obraSocial || '');
+        formData.append('numeroafiliado', patientData.numeroAfiliado || ''); // lowercase para N8N
+        formData.append('fechanacimiento', patientData.fechaNacimiento || ''); // lowercase para N8N
+        formData.append('notas', patientData.notas || '');
+        formData.append('clinicalRecord', patientData.historiaClinicaFile); // el archivo
+
+        requestOptions = {
+          method: 'POST',
+          body: formData,
+          // NO ponemos Content-Type, el navegador lo hace automáticamente para FormData
+        };
+
+      } else {
+        // Sin archivo, usar JSON normal
+        console.log('📄 Usando JSON (sin archivo)');
+        
+        requestOptions = {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            nombre: patientData.nombre || '',
+            telefono: patientData.telefono || '',
+            email: patientData.email || '',
+            obraSocial: patientData.obraSocial || '',
+            numeroAfiliado: patientData.numeroAfiliado || '',
+            fechaNacimiento: patientData.fechaNacimiento || '',
+            notas: patientData.notas || '',
+          })
+        };
+      }
+
+      // *** ÚNICA LLAMADA A N8N ***
+      const response = await fetch(URL_CREATE_PATIENT, requestOptions);
 
       if (!response.ok) {
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
 
-      return await response.json();
+      const responseData = await response.json();
+      console.log('✅ N8N respondió:', responseData);
+
+      // Normalizar la respuesta de N8N
+      const normalizedPatient = {
+        id: responseData.id || responseData.recordId || responseData.ID || patientData.id,
+        nombre: responseData.nombre || responseData.name || patientData.nombre,
+        telefono: responseData.telefono || responseData.phone || patientData.telefono,
+        email: responseData.email || patientData.email,
+        obraSocial: responseData.obraSocial || responseData.insurance || patientData.obraSocial,
+        numeroAfiliado: responseData.numeroAfiliado || responseData.affiliateNumber || patientData.numeroAfiliado,
+        fechaNacimiento: responseData.fechaNacimiento || responseData.birthDate || patientData.fechaNacimiento,
+        notas: responseData.notas || responseData.notes || patientData.notas,
+        historiaClinica: responseData.historiaClinica || responseData.clinicalRecord || '',
+        ultimaVisita: responseData.ultimaVisita || responseData.lastVisit || '',
+        // Mantener información del archivo si estaba presente
+        hasFile: !!patientData.historiaClinicaFile,
+        fileName: patientData.fileName,
+      };
+
+      console.log('✅ Paciente creado exitosamente:', normalizedPatient.nombre);
+      return normalizedPatient;
+
     } catch (error) {
-      console.error('Error al crear paciente:', error);
+      console.error('❌ Error al crear paciente:', error);
+      console.error('📊 Datos enviados:', {
+        url: URL_CREATE_PATIENT,
+        hasFile: !!patientData.historiaClinicaFile,
+        fileName: patientData.fileName,
+        patientName: patientData.nombre
+      });
       throw error;
     }
   }
@@ -67,6 +143,8 @@ export class PatientService {
    */
   static async updatePatient(patientData) {
     try {
+      console.log('📝 Actualizando paciente:', patientData.nombre);
+      
       const response = await fetch(URL_UPDATE_PATIENT, {
         method: 'POST',
         headers: {
@@ -79,9 +157,12 @@ export class PatientService {
         throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
 
-      return await response.json();
+      const updated = await response.json();
+      console.log('✅ Paciente actualizado exitosamente');
+      
+      return updated;
     } catch (error) {
-      console.error('Error al actualizar paciente:', error);
+      console.error('❌ Error al actualizar paciente:', error);
       throw error;
     }
   }

@@ -262,19 +262,23 @@ const handleDeletePatient = useCallback(async (patientOrId) => {
     alert(`Error eliminando paciente: ${err.message}`);
   }
 }, [refreshPatients, normalizedPatients]);
+  
+const onCreatedPatient = useCallback(async (patientData) => {
+  try {
+    console.log('👨‍⚕️ Procesando creación de paciente:', patientData.nombre);
 
-  // Crear sin insertar nada manualmente en el array local -> evito duplicados
-  const onCreatedPatient = useCallback(async (payload) => {
-    try {
-      await addPatient(payload);     // crea en n8n/Airtable
-      await refreshPatients();       // revalida contra la fuente de verdad
-      setShowAddModal(false);
-    } catch (err) {
-      console.error('Error creating patient:', err);
-      // opcional: mostrar un toast y mantener abierto el modal si querés reintentar
-      // setShowAddModal(true);
-    }
-  }, [addPatient, refreshPatients]);
+    await addPatient(patientData);
+        
+    console.log('✅ Paciente creado y agregado a la lista');
+    setShowAddModal(false);
+    
+  } catch (err) {
+    console.error('❌ Error creating patient:', err);
+    
+    // Mostrar error al usuario
+    alert(`Error: ${err.message || 'No se pudo crear el paciente'}`);
+  }
+}, [addPatient]); // Solo depende de addPatient, no de refreshPatients
 
   const onOpenRecord = useCallback((p) => { setSelectedPatient(p); setShowRecordModal(true); }, []);
 
