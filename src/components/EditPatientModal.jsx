@@ -14,7 +14,7 @@ export default function EditPatientModal({ open, patient, onClose, onSaved }) {
     email: '',
     obraSocial: '',
     numeroAfiliado: '',
-    fechaNacimiento: '', // yyyy-mm-dd
+    fechaNacimiento: '', 
     alergias: 'Ninguna',
     notas: ''
   });

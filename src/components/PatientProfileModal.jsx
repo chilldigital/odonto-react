@@ -8,10 +8,27 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onClose();
+    // Limpiar estados cuando se cierra el modal
+    if (!open) {
+      setShowConfirm(false);
+      setDeleting(false);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        if (showConfirm) {
+          setShowConfirm(false);
+          setDeleting(false);
+        } else {
+          onClose();
+        }
+      }
+    };
     if (open) window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  }, [open, onClose, showConfirm]);
 
   if (!open || !patient) return null;
 
@@ -38,7 +55,7 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
       if (!isNaN(date)) {
         return date.toLocaleDateString('es-AR', { 
           year: 'numeric', 
-          month: 'long', 
+          month: 'numeric', 
           day: 'numeric' 
         });
       }
@@ -52,7 +69,8 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
   }
 
   async function confirmDelete() {
-    if (!onDelete || !patient) return setShowConfirm(false);
+    if (!onDelete || !patient || deleting) return;
+    
     try {
       setDeleting(true);
       const id =
@@ -62,13 +80,20 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
         patient?.Id ||
         patient?.ID ||
         patient?.fields?.id;
-      // call once — avoid loops
-      await Promise.resolve(onDelete(id, patient));
+      
+      // Llamar a onDelete y esperar resultado
+      await onDelete(patient);
+      
+      // Limpiar estados y cerrar modal
       setShowConfirm(false);
+      setDeleting(false);
       onClose?.();
     } catch (e) {
-      // keep the confirm open but stop the spinner
+      console.error('Error eliminando paciente:', e);
+      // Mantener el modal abierto pero detener el spinner
       setDeleting(false);
+      // Mostrar error al usuario
+      alert(`Error al eliminar: ${e.message || 'Intente nuevamente'}`);
     }
   }
 
@@ -172,7 +197,10 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
               <button
                 type="button"
                 className="px-4 py-2 rounded-lg bg-gray-100 text-gray-900 hover:bg-gray-200 disabled:opacity-60"
-                onClick={() => setShowConfirm(false)}
+                onClick={() => {
+                  setShowConfirm(false);
+                  setDeleting(false);
+                }}
                 disabled={deleting}
               >
                 No, cancelar
