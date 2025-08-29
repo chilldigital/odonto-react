@@ -143,33 +143,82 @@ export class PatientService {
   }
 
   /**
-   * Actualizar un paciente existente
-   * @param {Object} patientData - Datos del paciente (debe incluir airtableId)
-   * @returns {Promise<Object>} Paciente actualizado
-   */
+ * Actualizar un paciente existente
+ * *** MEJORADO: Ahora soporta archivos ***
+ * @param {Object} patientData - Datos del paciente (debe incluir airtableId)
+ * @returns {Promise<Object>} Paciente actualizado
+ */
   static async updatePatient(patientData) {
-    try {
-      console.log('📝 Actualizando paciente:', patientData.nombre);
+  try {
+    console.log('📝 Actualizando paciente:', patientData.nombre, {
+      hasFile: !!patientData.historiaClinicaFile,
+      airtableId: patientData.airtableId
+    });
+
+    let requestOptions;
+
+    // *** LÓGICA CONDICIONAL: ARCHIVO vs JSON ***
+    if (patientData.historiaClinicaFile) {
+      // Si hay archivo, usar FormData
+      console.log('📁 Usando FormData para archivo:', patientData.historiaClinicaFile.name);
       
-      const response = await fetch(URL_UPDATE_PATIENT, {
+      const formData = new FormData();
+      formData.append('airtableId', patientData.airtableId);
+      
+      // Agregar todos los campos del formulario
+      Object.entries(patientData).forEach(([key, value]) => {
+        if (key !== 'historiaClinicaFile' && value != null) {
+          formData.append(key, String(value));
+        }
+      });
+      
+      // Agregar el archivo
+      formData.append('historiaClinica', patientData.historiaClinicaFile);
+
+      requestOptions = {
+        method: 'POST',
+        body: formData,
+        // NO ponemos Content-Type, el navegador lo setea automáticamente
+      };
+    } else {
+      // Sin archivo, usar JSON normal
+      console.log('📄 Usando JSON (sin archivo)');
+      
+      requestOptions = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(patientData)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-
-      const updated = await response.json();
-      console.log('✅ Paciente actualizado exitosamente');
-      
-      return updated;
-    } catch (error) {
-      console.error('❌ Error al actualizar paciente:', error);
-      throw error;
+      };
     }
+
+    const response = await fetch(URL_UPDATE_PATIENT, requestOptions);
+
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    
+    // Normalizar respuesta
+    const updatedPatient = {
+      ...patientData,
+      ...result,
+      ...(result.data || {}),
+    };
+
+    console.log('✅ Paciente actualizado exitosamente:', updatedPatient.nombre);
+    return updatedPatient;
+
+  } catch (error) {
+    console.error('❌ Error al actualizar paciente:', error);
+    console.error('📊 Datos enviados:', {
+      airtableId: patientData.airtableId,
+      hasFile: !!patientData.historiaClinicaFile,
+      fileName: patientData.historiaClinicaFile?.name,
+    });
+    throw error;
+  }
   }
 }
