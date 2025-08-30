@@ -93,14 +93,15 @@ function AuthedApp({ onLogout }) {
       .map((p) => {
         const fields = p?.fields || {};
 
-        // Try many likely keys for the registration/creation date
         const fechaRaw =
+          p?.fechaCreacion ??
           p?.fechaRegistro ??
           p?.FechaRegistro ??
           p?.['Fecha Registro'] ??
           fields['Fecha Registro'] ??
           fields.FechaRegistro ??
           fields.fechaRegistro ??
+          fields.fechaCreacion ??
           p?.fecha_registro ??
           p?.created_at ??
           fields.created_at ??
@@ -114,11 +115,15 @@ function AuthedApp({ onLogout }) {
         const fallbackRaw = p?._raw?.createdTime || p?._createdTime || null;
         const resolvedRaw = fechaRaw ?? fallbackRaw;
 
+        const ms = parseFechaToMs(resolvedRaw);
+        const createdMs = ms || (typeof p?._createdAt === 'number' ? p._createdAt : Date.now());
+
         return {
           ...p,
           nombre: p?.nombre ?? p?.name ?? fields.nombre ?? fields.Name ?? '',
-          fechaRegistro: resolvedRaw,
-          _createdAt: parseFechaToMs(resolvedRaw),
+          // guardo la mejor fecha disponible para trazabilidad
+          fechaRegistro: resolvedRaw ?? p?.fechaCreacion ?? fields.fechaCreacion ?? null,
+          _createdAt: createdMs,
         };
       })
       // evito filas vacías
@@ -229,18 +234,33 @@ const onCreatedPatient = useCallback(async (patientData) => {
   try {
     console.log('👨‍⚕️ Procesando creación de paciente:', patientData.nombre);
 
-    await addPatient(patientData);
-        
+    // Intentar crear mediante el hook; algunos hooks devuelven el creado, otros no
+    const res = await addPatient(patientData);
+
     console.log('✅ Paciente creado y agregado a la lista');
     setShowAddModal(false);
-    
+
+    // Normalizamos un retorno por si el hook no devuelve nada
+    const createdFallback = {
+      ...patientData,
+      id: patientData?.id || patientData?.airtableId || patientData?.recordId || String(Date.now()),
+      fechaCreacion:
+        patientData?.fechaCreacion ||
+        patientData?.fechaRegistro ||
+        new Date().toISOString().slice(0, 10),
+      _createdAt: typeof patientData?._createdAt === 'number' ? patientData._createdAt : Date.now(),
+    };
+
+    // Si res es un objeto de respuesta con el paciente adentro, preferirlo
+    const created = (Array.isArray(res) ? res[0]?.patient : res?.patient) || res || createdFallback;
+    return created;
+
   } catch (err) {
     console.error('❌ Error creating patient:', err);
-    
-    // Mostrar error al usuario
     alert(`Error: ${err.message || 'No se pudo crear el paciente'}`);
+    throw err;
   }
-}, [addPatient]); // Solo depende de addPatient, no de refreshPatients
+}, [addPatient]);
 
   const onOpenRecord = useCallback((p) => { setSelectedPatient(p); setShowRecordModal(true); }, []);
 

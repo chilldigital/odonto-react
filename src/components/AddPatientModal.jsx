@@ -2,11 +2,15 @@ import React, { useState, useRef, useEffect } from 'react';
 
 /**
  * Modal para crear un paciente.
- * 
- * CAMBIO IMPORTANTE: Ya NO hace llamadas directas a N8N
- * Solo prepara los datos y los pasa a onCreate para evitar duplicados
+ *
+ * Objetivo Paso 1:
+ *  - Enviar los datos al padre mediante `onCreate(patientData)` (el padre hace el POST a n8n)
+ *  - Al resolver, notificar con `onCreated(createdPatient)` usando la respuesta del servidor
+ *  - Asegurar fecha de creación y timestamp local como fallback para que el dashboard pinte al instante
+ *  - Prevenir envíos duplicados con un flag ref
+ *  - Añadir console.log para verificar el flujo
  */
-export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
+export default function AddPatientModal({ open, isOpen, onClose, onCreate, onCreated }) {
   const openFlag = open ?? isOpen;
   const submittingRef = useRef(false);
 
@@ -56,24 +60,33 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
     });
   };
 
+  const todayISO = () => {
+    const d = new Date();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${mm}-${dd}`; // yyyy-mm-dd
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // *** PREVENCIÓN DE DUPLICADOS ***
     if (submitting || submittingRef.current) {
       console.log('🚫 Envío bloqueado - ya se está procesando');
       return;
     }
-    
+
     setSubmitting(true);
     submittingRef.current = true;
-    console.log('🚀 Iniciando creación de paciente...');
+    console.log('🚀 [AddPatientModal] Iniciando creación de paciente...');
 
     try {
       // *** PREPARAR DATOS PARA EL PADRE ***
-      // Solo preparamos los datos, NO hacemos fetch directo
-      const patientData = {
-        id: crypto?.randomUUID?.() || String(Date.now()),
+      const fallbackId = crypto?.randomUUID?.() || String(Date.now());
+      const fallbackFecha = todayISO();
+
+      const baseData = {
+        id: fallbackId,
         nombre: form.nombre || '',
         dni: form.dni || '',
         telefono: form.telefono || '',
@@ -85,49 +98,59 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
         notas: form.notas || '',
         historiaClinica: '',
         ultimaVisita: '',
-        // Información del archivo (si existe)
+        // Fallbacks para pintado inmediato en Dashboard
+        fechaCreacion: fallbackFecha,
+        _createdAt: Date.now(),
+        // Info del archivo (si existe)
         hasFile: !!form.historiaClinicaFile,
         fileName: form.historiaClinicaFile?.name,
         fileType: form.historiaClinicaFile?.type,
         fileSize: form.historiaClinicaFile?.size,
       };
 
-      // Si hay archivo, lo agregamos al objeto para que onCreate lo maneje
       if (form.historiaClinicaFile) {
-        patientData.historiaClinicaFile = form.historiaClinicaFile;
-        console.log('📁 Paciente con archivo:', form.historiaClinicaFile.name);
+        baseData.historiaClinicaFile = form.historiaClinicaFile;
+        console.log('📁 [AddPatientModal] Paciente con archivo:', form.historiaClinicaFile.name);
       } else {
-        console.log('📄 Paciente sin archivo');
+        console.log('📄 [AddPatientModal] Paciente sin archivo');
       }
 
-      // *** ÚNICA LLAMADA: Delegar al componente padre ***
-      // onCreate debe manejar TODA la lógica de envío a N8N
-      if (typeof onCreate === 'function') {
-        console.log('📤 Enviando datos al componente padre...');
-        await onCreate(patientData);
-        console.log('✅ Paciente creado exitosamente');
-      } else {
+      if (typeof onCreate !== 'function') {
         throw new Error('onCreate no está definido');
       }
 
-      // *** FINALIZACIÓN EXITOSA ***
+      console.log('📤 [AddPatientModal] Enviando datos al padre via onCreate...', baseData);
+
+      // **Importante**: cerramos el modal rápido para mejor UX
       onClose?.();
+
+      // El padre hace el POST y devuelve el paciente creado (ideal)
+      const createdRes = await onCreate(baseData);
+      console.log('✅ [AddPatientModal] onCreate resuelto:', createdRes);
+
+      // Normalizamos la respuesta para asegurar fechaCreacion / _createdAt e id
+      const fromServer = (Array.isArray(createdRes) ? createdRes[0]?.patient : createdRes?.patient) || createdRes || {};
+      const createdPatient = {
+        ...baseData,
+        ...fromServer,
+        id: fromServer?.id || baseData.id,
+        fechaCreacion: fromServer?.fechaCreacion || baseData.fechaCreacion || todayISO(),
+        _createdAt: typeof fromServer?._createdAt === 'number' ? fromServer._createdAt : baseData._createdAt,
+      };
+
+      if (typeof onCreated === 'function') {
+        console.log('📣 [AddPatientModal] Notificando onCreated con:', createdPatient);
+        onCreated(createdPatient);
+      }
+
       resetForm();
-      
     } catch (err) {
-      console.error('❌ Error al crear paciente:', err);
-      console.error('📊 Datos que se intentaron enviar:', {
-        hasFile: !!form.historiaClinicaFile,
-        fileName: form.historiaClinicaFile?.name,
-        formData: form
-      });
-      
+      console.error('❌ [AddPatientModal] Error al crear paciente:', err);
       alert(`Error: ${err.message || 'No se pudo crear el paciente'}`);
-      
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
-      console.log('🔄 Estado de envío reseteado');
+      console.log('🔄 [AddPatientModal] Estado de envío reseteado');
     }
   };
 
@@ -143,7 +166,7 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
 
       {/* Contenedor */}
       <div className="absolute inset-0 flex items-start justify-center overflow-y-auto p-4 sm:p-6">
-        <div className="mt-8 w-full max-w-xl rounded-xl bg-white shadow-xl">
+        <div className="mt-8 w-full max-w-xl rounded-xl bg-white shadow-xl overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between border-b px-6 py-4">
             <h3 className="text-lg font-semibold text-gray-900">Agregar Paciente</h3>
@@ -313,7 +336,7 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate }) {
                 disabled={submitting || !form.nombre.trim()}
                 className={`rounded-md px-4 py-2 font-medium text-white transition-colors ${
                   submitting || !form.nombre.trim()
-                    ? 'bg-emerald-400 cursor-not-allowed' 
+                    ? 'bg-emerald-400 cursor-not-allowed'
                     : 'bg-emerald-600 hover:bg-emerald-700'
                 }`}
               >
