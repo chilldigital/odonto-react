@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
 /**
@@ -15,13 +15,20 @@ import { X } from 'lucide-react';
  * usa `overflow-hidden` para que la barra de scroll no sobresalga.
  */
 export default function ModalShell({ title, onClose, children, footer }) {
+  useEffect(() => {
+    const original = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, []);
   return (
     <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       {/* Wrapper: añade márgenes top/bottom */}
-      <div className="relative z-10 flex min-h-full items-start justify-center py-6 md:py-10 px-4">
+      <div className="relative z-10 flex h-full items-center justify-center py-6 md:py-10 px-4">
         {/* Card del modal */}
         <div className="relative bg-white w-full max-w-md rounded-2xl shadow-xl border flex flex-col max-h-[calc(100vh-3rem)] md:max-h-[calc(100vh-5rem)] min-h-0 overflow-hidden">
           {/* Header fijo */}

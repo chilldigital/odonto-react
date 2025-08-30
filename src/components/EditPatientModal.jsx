@@ -4,9 +4,6 @@ import TextInput from './TextInput';
 import { Phone, Mail, Calendar, FileText, Hash, AlertCircle, Check } from 'lucide-react';
 import { cls } from '../utils/helpers';
 
-// *** CAMBIO: Ya NO importamos URL_UPDATE_PATIENT ***
-// import { URL_UPDATE_PATIENT } from '../config/n8n';
-
 export default function EditPatientModal({ open, patient, onClose, onSaved }) {
   const savingRef = useRef(false);
 
@@ -67,9 +64,7 @@ export default function EditPatientModal({ open, patient, onClose, onSaved }) {
   if (!open || !patient) return null;
 
   const save = async () => {
-    // Prevención de duplicados
     if (saving || savingRef.current) {
-      console.log('🚫 Guardado bloqueado - ya se está procesando');
       return;
     }
 
@@ -77,47 +72,39 @@ export default function EditPatientModal({ open, patient, onClose, onSaved }) {
     savingRef.current = true;
     setError('');
     setOk(false);
-    console.log('🚀 Iniciando actualización de paciente...');
 
     try {
-      // *** PREPARAR DATOS PARA EL CALLBACK ***
       const updatedPatientData = {
-        ...patient,  // Mantener datos originales
-        ...form,     // Sobrescribir con cambios
-        airtableId: patient.airtableId,  // Asegurar ID
+        ...patient,
+        ...form,
+        airtableId: patient.airtableId,
       };
 
-      // Si hay archivo, agregarlo
       if (historiaClinicaFile) {
         updatedPatientData.historiaClinicaFile = historiaClinicaFile;
         updatedPatientData.historiaClinicaNombre = historiaClinicaFile.name;
       }
 
-      console.log('📤 Enviando datos actualizados:', updatedPatientData.nombre);
-
-      // *** PASAR DATOS AL CALLBACK onSaved ***
-      // El componente padre (App.js) maneja la llamada real a N8N
       if (onSaved) {
         await onSaved(updatedPatientData);
       }
 
       setOk(true);
-      console.log('✅ Paciente actualizado exitosamente');
       setTimeout(onClose, 900);
 
     } catch (error) {
-      console.error('❌ Error actualizando paciente:', error);
       setError(error.message || 'Error actualizando el paciente');
     } finally {
       savingRef.current = false;
       setSaving(false);
-      console.log('🔄 Estado de guardado reseteado');
     }
   };
 
   return (
     <ModalShell title="Editar Paciente" onClose={onClose}>
-      <div className="flex max-h-[80vh] flex-col">
+      {/* Importante: usamos h-full y dejamos que ModalShell limite altura y oculte overflow */}
+      <div className="flex h-full flex-col overflow-hidden">
+        {/* ÚNICO scroller: solo la información */}
         <div className="flex-1 overflow-y-auto px-2 space-y-4">
           <TextInput 
             label="Nombre" 
@@ -171,7 +158,6 @@ export default function EditPatientModal({ open, patient, onClose, onSaved }) {
             icon={Calendar} 
           />
 
-          {/* Historia Clínica (archivo) */}
           <div className="flex flex-col">
             <label className="mb-1 text-sm font-medium text-gray-700">
               Historia Clínica (archivo)
@@ -199,7 +185,6 @@ export default function EditPatientModal({ open, patient, onClose, onSaved }) {
             onChange={(v)=>setForm(s=>({...s, alergias:v}))} 
           />
 
-          {/* Notas */}
           <div className="flex flex-col">
             <label className="mb-1 text-sm font-medium text-gray-700">Notas</label>
             <textarea
@@ -224,8 +209,8 @@ export default function EditPatientModal({ open, patient, onClose, onSaved }) {
           )}
         </div>
 
-        {/* Footer with actions */}
-        <div className="mt-4 flex justify-end gap-3 border-t pt-3 bg-white">
+        {/* Footer fijo (fuera del scroller) */}
+        <div className="flex-none bg-white border-t px-2 pt-3 pb-3 flex justify-end gap-3">
           <button 
             className="px-4 py-2 rounded-lg border text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" 
             onClick={onClose} 
