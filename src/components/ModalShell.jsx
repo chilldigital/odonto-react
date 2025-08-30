@@ -1,18 +1,53 @@
 import React from 'react';
 import { X } from 'lucide-react';
 
-export default function ModalShell({ title, onClose, children }) {
+/**
+ * ModalShell
+ *
+ * Estructura con 3 zonas:
+ *  - Header fijo (título + cerrar)
+ *  - Body scrollable (contenido)
+ *  - Footer fijo (botones)
+ *
+ * Esto asegura márgenes superior/inferior respecto a la ventana,
+ * que el scroll sólo afecte al contenido y que los botones
+ * queden siempre visibles. Además, el contenedor de la tarjeta
+ * usa `overflow-hidden` para que la barra de scroll no sobresalga.
+ */
+export default function ModalShell({ title, onClose, children, footer }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50">
+      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white w-[90%] max-w-md rounded-2xl shadow-xl border p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500" aria-label="Cerrar">
-            <X size={18} />
-          </button>
+
+      {/* Wrapper: añade márgenes top/bottom */}
+      <div className="relative z-10 flex min-h-full items-start justify-center py-6 md:py-10 px-4">
+        {/* Card del modal */}
+        <div className="relative bg-white w-full max-w-md rounded-2xl shadow-xl border flex flex-col max-h-[calc(100vh-3rem)] md:max-h-[calc(100vh-5rem)] min-h-0 overflow-hidden">
+          {/* Header fijo */}
+          <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b">
+            <h3 className="text-lg font-semibold text-gray-900 truncate pr-4">{title}</h3>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+              aria-label="Cerrar"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Body scrollable */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 [scrollbar-gutter:stable]">
+            {children}
+          </div>
+
+          {/* Footer fijo (botones) */}
+          {footer && (
+            <div className="px-6 py-4 border-t bg-white">
+              {footer}
+            </div>
+          )}
         </div>
-        {children}
       </div>
     </div>
   );
