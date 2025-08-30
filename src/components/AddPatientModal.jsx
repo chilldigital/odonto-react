@@ -72,13 +72,11 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate, onCre
 
     // *** PREVENCIÓN DE DUPLICADOS ***
     if (submitting || submittingRef.current) {
-      console.log('🚫 Envío bloqueado - ya se está procesando');
       return;
     }
 
     setSubmitting(true);
     submittingRef.current = true;
-    console.log('🚀 [AddPatientModal] Iniciando creación de paciente...');
 
     try {
       // *** PREPARAR DATOS PARA EL PADRE ***
@@ -110,23 +108,17 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate, onCre
 
       if (form.historiaClinicaFile) {
         baseData.historiaClinicaFile = form.historiaClinicaFile;
-        console.log('📁 [AddPatientModal] Paciente con archivo:', form.historiaClinicaFile.name);
-      } else {
-        console.log('📄 [AddPatientModal] Paciente sin archivo');
-      }
+      } 
 
       if (typeof onCreate !== 'function') {
         throw new Error('onCreate no está definido');
       }
-
-      console.log('📤 [AddPatientModal] Enviando datos al padre via onCreate...', baseData);
 
       // **Importante**: cerramos el modal rápido para mejor UX
       onClose?.();
 
       // El padre hace el POST y devuelve el paciente creado (ideal)
       const createdRes = await onCreate(baseData);
-      console.log('✅ [AddPatientModal] onCreate resuelto:', createdRes);
 
       // Normalizamos la respuesta para asegurar fechaCreacion / _createdAt e id
       const fromServer = (Array.isArray(createdRes) ? createdRes[0]?.patient : createdRes?.patient) || createdRes || {};
@@ -139,7 +131,6 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate, onCre
       };
 
       if (typeof onCreated === 'function') {
-        console.log('📣 [AddPatientModal] Notificando onCreated con:', createdPatient);
         onCreated(createdPatient);
       }
 
@@ -150,7 +141,6 @@ export default function AddPatientModal({ open, isOpen, onClose, onCreate, onCre
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
-      console.log('🔄 [AddPatientModal] Estado de envío reseteado');
     }
   };
 

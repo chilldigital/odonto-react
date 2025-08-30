@@ -1,6 +1,36 @@
 import { useState, useEffect, useCallback } from 'react';
 import { PatientService } from '../services/PatientService';
 
+/** Helper: parse ISO/date-like string to ms */
+const toMs = (v) => {
+  if (!v) return 0;
+  const n = Date.parse(v);
+  return Number.isNaN(n) ? 0 : n;
+};
+
+/** Ensure each patient carries createdTime (ISO) and _createdAt (ms) */
+const normalizePatient = (p) => {
+  if (!p) return p;
+  const createdIso =
+    p.createdTime ??
+    p.fechaCreacion ??
+    p.fechaRegistro ??
+    p.FechaRegistro ??
+    p['Fecha Registro'] ??
+    p.created_at ??
+    p.createdAt ??
+    '';
+
+  const createdTime = p.createdTime ?? createdIso ?? '';
+  const createdMs = toMs(createdTime) || (typeof p._createdAt === 'number' ? p._createdAt : Date.now());
+
+  return {
+    ...p,
+    createdTime,
+    _createdAt: createdMs,
+  };
+};
+
 /**
  * Hook personalizado para gestionar el estado de los pacientes
  * @returns {Object} Estado y funciones para manejar pacientes
@@ -16,10 +46,13 @@ export function usePatients() {
   const loadPatients = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const fetchedPatients = await PatientService.fetchAllPatients();
-      setPatients(fetchedPatients);
+      const normalized = Array.isArray(fetchedPatients)
+        ? fetchedPatients.map(normalizePatient)
+        : [];
+      setPatients(normalized);
     } catch (err) {
       setError(err.message);
       console.error('Error cargando pacientes:', err);
@@ -37,12 +70,23 @@ export function usePatients() {
     setError(null);
 
     try {
-      const newPatient = await PatientService.createPatient(patientData);
-      
-      // Agregar el nuevo paciente al estado local
-      setPatients(prevPatients => [...prevPatients, newPatient]);
-      
-      return newPatient;
+      const newPatientRaw = await PatientService.createPatient(patientData);
+      // Algunas implementaciones devuelven { patient }, otras devuelven el objeto directo
+      const newPatient = (Array.isArray(newPatientRaw) ? newPatientRaw[0]?.patient : newPatientRaw?.patient) || newPatientRaw || {};
+
+      // createdTime desde POST (Formatear POST) o fallback a ahora
+      const createdTime =
+        newPatient?.data?.createdTime ||
+        newPatient?.createdTime ||
+        patientData?.createdTime ||
+        new Date().toISOString();
+
+      const normalized = normalizePatient({ ...newPatient, createdTime });
+
+      // Agregar el nuevo paciente al estado local (al final; las vistas deciden el orden)
+      setPatients((prevPatients) => [...prevPatients, normalized]);
+
+      return normalized;
     } catch (err) {
       setError(err.message);
       throw err;
@@ -60,17 +104,17 @@ export function usePatients() {
     setError(null);
 
     try {
-      const updatedPatient = await PatientService.updatePatient(patientData);
-      
-      // Actualizar el paciente en el estado local
-      setPatients(prevPatients => 
-        prevPatients.map(patient => 
-          patient.airtableId === patientData.airtableId 
-            ? { ...patient, ...updatedPatient }
+      const updatedRaw = await PatientService.updatePatient(patientData);
+      const updatedPatient = (Array.isArray(updatedRaw) ? updatedRaw[0]?.patient : updatedRaw?.patient) || updatedRaw || {};
+
+      setPatients((prevPatients) =>
+        prevPatients.map((patient) =>
+          patient.airtableId === patientData.airtableId
+            ? normalizePatient({ ...patient, ...updatedPatient })
             : patient
         )
       );
-      
+
       return updatedPatient;
     } catch (err) {
       setError(err.message);
@@ -99,6 +143,6 @@ export function usePatients() {
     loadPatients,
     addPatient,
     updatePatient,
-    refreshPatients
+    refreshPatients,
   };
 }

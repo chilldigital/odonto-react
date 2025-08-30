@@ -185,7 +185,6 @@ const handleDeletePatient = useCallback(async (patientData) => {
       throw new Error('No se pudo identificar el paciente');
     }
 
-    console.log(`Eliminando paciente: ${nombre} (${id})`);
 
     // Optimistic: ocultar inmediatamente
     setLocallyDeleted(prev => [...prev, id]);
@@ -206,7 +205,6 @@ const handleDeletePatient = useCallback(async (patientData) => {
       throw new Error(`Error del servidor: ${response.status}`);
     }
 
-    console.log(`Paciente ${nombre} eliminado exitosamente`);
 
     // Refrescar lista
     await refreshPatients();
@@ -232,12 +230,10 @@ const handleDeletePatient = useCallback(async (patientData) => {
   
 const onCreatedPatient = useCallback(async (patientData) => {
   try {
-    console.log('👨‍⚕️ Procesando creación de paciente:', patientData.nombre);
 
     // Intentar crear mediante el hook; algunos hooks devuelven el creado, otros no
     const res = await addPatient(patientData);
 
-    console.log('✅ Paciente creado y agregado a la lista');
     setShowAddModal(false);
 
     // Normalizamos un retorno por si el hook no devuelve nada
