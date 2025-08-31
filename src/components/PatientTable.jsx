@@ -5,13 +5,24 @@ export default React.memo(function PatientTable({ patients, onView, onOpenRecord
   const [pendingDelete, setPendingDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Limpiar el estado cuando cambie la lista de pacientes
   useEffect(() => {
     if (pendingDelete && !patients.find(p => p.id === pendingDelete.id)) {
       setPendingDelete(null);
       setIsDeleting(false);
     }
   }, [patients, pendingDelete]);
+
+  async function confirmDelete() {
+    if (!pendingDelete || !onDelete) return;
+    try {
+      setIsDeleting(true);
+      await onDelete(pendingDelete);
+      setPendingDelete(null);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-full">
@@ -20,26 +31,43 @@ export default React.memo(function PatientTable({ patients, onView, onOpenRecord
             <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Nombre</th>
             <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Obra Social</th>
             <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Historia Clínica</th>
-            <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Última Visita</th>
+            <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Telefono</th>
             <th className="text-right p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Acciones</th>
           </tr>
         </thead>
         <tbody>
           {patients.map((paciente) => (
             <tr key={paciente.id} className="group border-b hover:bg-gray-50">
-              <td className="p-3 lg:p-4 text-sm whitespace-nowrap"><button type="button" onClick={() => onView && onView(paciente)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView && onView(paciente); } }} className="p-0 m-0 bg-transparent text-left text-gray-900 hover:underline focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-sm cursor-pointer" aria-label={`Ver perfil de ${paciente.nombre}`}>{paciente.nombre}</button></td>
-              <td className="p-3 lg:p-4 text-sm text-blue-600 whitespace-nowrap">{paciente.obraSocial}</td>
               <td className="p-3 lg:p-4 text-sm whitespace-nowrap">
                 <button
                   type="button"
-                  onClick={() => onOpenRecord && onOpenRecord(historiaClinicaUrl)}
+                  onClick={() => onView && onView(paciente)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView && onView(paciente); } }}
+                  className="p-0 m-0 bg-transparent text-left text-gray-900 hover:underline focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-sm cursor-pointer"
+                  aria-label={`Ver perfil de ${paciente.nombre}`}
+                >
+                  {paciente.nombre}
+                </button>
+              </td>
+
+              <td className="p-3 lg:p-4 text-sm text-blue-600 whitespace-nowrap">{paciente.obraSocial}</td>
+
+              <td className="p-3 lg:p-4 text-sm whitespace-nowrap">
+                <button
+                  type="button"
+                  onClick={() => onOpenRecord && onOpenRecord({
+                    ...paciente,
+                    historiaUrl: paciente.historiaClinica || paciente.historiaClinicaUrl || paciente.odontogramaUrl || paciente.historiaUrl || ''
+                  })}
                   className="text-teal-600 hover:underline font-medium"
                   aria-label={`Abrir historia clínica de ${paciente.nombre}`}
                 >
-                  {paciente.historiaClinica || 'Abrir'}
+                  Abrir
                 </button>
               </td>
-              <td className="p-3 lg:p-4 text-sm text-gray-900 whitespace-nowrap">{paciente.ultimaVisita}</td>
+
+              <td className="p-3 lg:p-4 text-sm text-gray-900 whitespace-nowrap">{paciente.telefono || '—'}</td>
+
               <td className="p-3 lg:p-4">
                 <div className="flex justify-end items-center gap-2 opacity-60 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                   <button
@@ -62,6 +90,7 @@ export default React.memo(function PatientTable({ patients, onView, onOpenRecord
           ))}
         </tbody>
       </table>
+
       {pendingDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
@@ -75,10 +104,7 @@ export default React.memo(function PatientTable({ patients, onView, onOpenRecord
             <div className="flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => {
-                  setPendingDelete(null);
-                  setIsDeleting(false);
-                }}
+                onClick={() => { setPendingDelete(null); setIsDeleting(false); }}
                 className="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 disabled={isDeleting}
               >
@@ -88,9 +114,9 @@ export default React.memo(function PatientTable({ patients, onView, onOpenRecord
                 type="button"
                 className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
                 onClick={confirmDelete}
-                disabled={deleting}
+                disabled={isDeleting}
               >
-                {deleting ? 'Eliminando…' : 'Sí, eliminar'}
+                {isDeleting ? 'Eliminando…' : 'Sí, eliminar'}
               </button>
             </div>
           </div>
