@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import ModalShell from './ModalShell';
-import TextInput from './TextInput';
-import { Phone, Mail, Calendar, FileText, Hash, AlertCircle, Check } from 'lucide-react';
+import { User, Hash, Phone, Building2, FileText, AlertTriangle, Activity, Stethoscope, AlertCircle, Check } from 'lucide-react';
 import { cls } from '../utils/helpers';
 
 export default function EditPatientModal({ open, patient, onClose, onSaved }) {
@@ -11,41 +10,42 @@ export default function EditPatientModal({ open, patient, onClose, onSaved }) {
     nombre: '',
     dni: '',
     telefono: '',
-    email: '',
     obraSocial: '',
     numeroAfiliado: '',
-    fechaNacimiento: '', 
-    alergias: 'Ninguna',
+    alergia: '',
+    antecedentes: '',
+    historiaClinica: '',
+    estado: 'Activo',
     notas: ''
   });
+  
   const [historiaClinicaFile, setHistoriaClinicaFile] = useState(null);
-
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [ok, setOk] = useState(false);
 
-  const toInputDate = (v) => {
-    if (!v) return '';
-    if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10);
-    const d = new Date(v);
-    if (isNaN(d)) return '';
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    setHistoriaClinicaFile(file || null);
   };
 
   useEffect(() => {
-    if (open) {
+    if (open && patient) {
       setForm({
         nombre: patient?.nombre || '',
         dni: patient?.dni || '',
         telefono: patient?.telefono || '',
-        email: patient?.email || '',
         obraSocial: patient?.obraSocial || '',
         numeroAfiliado: patient?.numeroAfiliado || '',
-        fechaNacimiento: toInputDate(patient?.fechaNacimiento || patient?.fecha_nacimiento),
-        alergias: patient?.alergias || 'Ninguna',
+        alergia: patient?.alergia || patient?.alergias || '',
+        antecedentes: patient?.antecedentes || '',
+        historiaClinica: patient?.historiaClinica || '',
+        estado: patient?.estado || 'Activo',
         notas: patient?.notas || ''
       });
       setHistoriaClinicaFile(null);
@@ -65,6 +65,11 @@ export default function EditPatientModal({ open, patient, onClose, onSaved }) {
 
   const save = async () => {
     if (saving || savingRef.current) {
+      return;
+    }
+
+    if (!form.nombre?.trim()) {
+      setError('El nombre es obligatorio');
       return;
     }
 
@@ -102,64 +107,150 @@ export default function EditPatientModal({ open, patient, onClose, onSaved }) {
 
   return (
     <ModalShell title="Editar Paciente" onClose={onClose}>
-      {/* Importante: usamos h-full y dejamos que ModalShell limite altura y oculte overflow */}
       <div className="flex h-full flex-col overflow-hidden">
-        {/* ÚNICO scroller: solo la información */}
+        
+        {/* Mensajes de estado */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center text-red-700 text-sm">
+            <AlertCircle size={16} className="mr-2 shrink-0" />
+            {error}
+          </div>
+        )}
+        
+        {ok && (
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center text-green-700 text-sm">
+            <Check size={16} className="mr-2 shrink-0" />
+            Paciente actualizado correctamente
+          </div>
+        )}
+
+        {/* Contenido scrollable */}
         <div className="flex-1 overflow-y-auto px-2 space-y-4">
-          <TextInput 
-            label="Nombre" 
-            value={form.nombre} 
-            onChange={(v)=>setForm(s=>({...s, nombre:v}))} 
-          />
+          
+          {/* 1. Nombre */}
+          <div>
+            <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+              <User size={16} className="mr-2 text-gray-500" />
+              Nombre *
+            </label>
+            <input
+              name="nombre"
+              value={form.nombre}
+              onChange={handleChange}
+              type="text"
+              placeholder="Nombre completo del paciente"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              disabled={saving}
+              required
+            />
+          </div>
 
-          <TextInput 
-            label="DNI" 
-            type="text" 
-            value={form.dni}
-            onChange={(v)=>setForm(s=>({...s, dni:v}))} 
-            icon={Hash} 
-          />
+          {/* 2. DNI */}
+          <div>
+            <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+              <Hash size={16} className="mr-2 text-gray-500" />
+              DNI
+            </label>
+            <input
+              name="dni"
+              value={form.dni}
+              onChange={handleChange}
+              type="text"
+              placeholder="Número de documento"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              disabled={saving}
+            />
+          </div>
 
-          <TextInput 
-            label="Teléfono" 
-            type="tel" 
-            value={form.telefono}
-            onChange={(v)=>setForm(s=>({...s, telefono:v}))} 
-            icon={Phone} 
-          />
+          {/* 3. Teléfono */}
+          <div>
+            <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+              <Phone size={16} className="mr-2 text-gray-500" />
+              Teléfono
+            </label>
+            <input
+              name="telefono"
+              value={form.telefono}
+              onChange={handleChange}
+              type="tel"
+              placeholder="+54 11 5555-5555"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              disabled={saving}
+            />
+          </div>
 
-          <TextInput 
-            label="Email" 
-            type="email" 
-            value={form.email}
-            onChange={(v)=>setForm(s=>({...s, email:v}))} 
-            icon={Mail} 
-          />
+          {/* 4. Obra Social */}
+          <div>
+            <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+              <Building2 size={16} className="mr-2 text-gray-500" />
+              Obra Social
+            </label>
+            <input
+              name="obraSocial"
+              value={form.obraSocial}
+              onChange={handleChange}
+              type="text"
+              placeholder="OSDE, Swiss Medical, etc."
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              disabled={saving}
+            />
+          </div>
 
-          <TextInput 
-            label="Obra Social" 
-            value={form.obraSocial}
-            onChange={(v)=>setForm(s=>({...s, obraSocial:v}))} 
-          />
+          {/* 5. Número de Afiliado */}
+          <div>
+            <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+              <Hash size={16} className="mr-2 text-gray-500" />
+              N° de Afiliado
+            </label>
+            <input
+              name="numeroAfiliado"
+              value={form.numeroAfiliado}
+              onChange={handleChange}
+              type="text"
+              placeholder="1234-5678-90"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              disabled={saving}
+            />
+          </div>
 
-          <TextInput 
-            label="Número de Afiliado" 
-            type="text" 
-            value={form.numeroAfiliado}
-            onChange={(v)=>setForm(s=>({...s, numeroAfiliado:v}))} 
-            icon={Hash} 
-          />
+          {/* 6. Alergia */}
+          <div>
+            <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+              <AlertTriangle size={16} className="mr-2 text-gray-500" />
+              Alergia
+            </label>
+            <input
+              name="alergia"
+              value={form.alergia}
+              onChange={handleChange}
+              type="text"
+              placeholder="Ninguna / Penicilina, Polen..."
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              disabled={saving}
+            />
+          </div>
 
-          <TextInput 
-            label="Fecha de Nacimiento" 
-            type="date" 
-            value={form.fechaNacimiento}
-            onChange={(v)=>setForm(s=>({...s, fechaNacimiento:v}))} 
-            icon={Calendar} 
-          />
+          {/* 7. Antecedentes */}
+          <div>
+            <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+              <Stethoscope size={16} className="mr-2 text-gray-500" />
+              Antecedentes
+            </label>
+            <textarea
+              name="antecedentes"
+              value={form.antecedentes}
+              onChange={handleChange}
+              rows={2}
+              placeholder="Antecedentes médicos relevantes..."
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-gray-100 disabled:cursor-not-allowed resize-none"
+              disabled={saving}
+            />
+          </div>
 
-          <div className="flex flex-col">
-            <label className="mb-1 text-sm font-medium text-gray-700">
+          {/* 8. Historia Clínica (Archivo) */}
+          <div>
+            <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+              <FileText size={16} className="mr-2 text-gray-500" />
               Historia Clínica (archivo)
             </label>
             <div className="flex items-center rounded-lg border px-3 py-2 bg-white">
@@ -167,7 +258,7 @@ export default function EditPatientModal({ open, patient, onClose, onSaved }) {
               <input
                 type="file"
                 accept=".pdf,image/*"
-                onChange={(e)=>setHistoriaClinicaFile(e.target.files?.[0] || null)}
+                onChange={handleFileChange}
                 className="w-full text-sm text-gray-700 file:mr-3 file:rounded-md file:border file:border-gray-200 file:bg-gray-50 file:px-3 file:py-1.5 file:text-sm file:text-gray-700"
                 disabled={saving}
               />
@@ -179,67 +270,67 @@ export default function EditPatientModal({ open, patient, onClose, onSaved }) {
             )}
           </div>
 
-          <TextInput 
-            label="Alergias" 
-            value={form.alergias} 
-            onChange={(v)=>setForm(s=>({...s, alergias:v}))} 
-          />
+          {/* 9. Estado */}
+          <div>
+            <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+              <Activity size={16} className="mr-2 text-gray-500" />
+              Estado
+            </label>
+            <select
+              name="estado"
+              value={form.estado}
+              onChange={handleChange}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              disabled={saving}
+            >
+              <option value="Activo">Activo</option>
+              <option value="Inactivo">Inactivo</option>
+              <option value="En Tratamiento">En Tratamiento</option>
+              <option value="Alta">Alta</option>
+            </select>
+          </div>
 
-          <div className="flex flex-col">
-            <label className="mb-1 text-sm font-medium text-gray-700">Notas</label>
+          {/* 10. Notas */}
+          <div>
+            <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+              <FileText size={16} className="mr-2 text-gray-500" />
+              Notas
+            </label>
             <textarea
-              rows={3}
-              className="rounded-lg border px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              name="notas"
               value={form.notas}
-              onChange={(e)=>setForm(s=>({...s, notas:e.target.value}))}
-              placeholder="Observaciones, antecedentes, etc."
+              onChange={handleChange}
+              rows={3}
+              placeholder="Observaciones adicionales..."
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-gray-100 disabled:cursor-not-allowed resize-none"
               disabled={saving}
             />
           </div>
-
-          {error && (
-            <div className="mt-2 flex items-center text-sm text-red-600">
-              <AlertCircle className="mr-2" size={16}/> {error}
-            </div>
-          )}
-          {ok && (
-            <div className="mt-2 flex items-center text-sm text-green-600">
-              <Check className="mr-2" size={16}/> Guardado
-            </div>
-          )}
         </div>
 
-        {/* Footer fijo (fuera del scroller) */}
-        <div className="flex-none bg-white border-t px-2 pt-3 pb-3 flex justify-end gap-3">
-          <button 
-            className="px-4 py-2 rounded-lg border text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" 
-            onClick={onClose} 
-            disabled={saving}
-          >
-            Cancelar
-          </button>
-          <button
-            className={cls(
-              'px-4 py-2 rounded-lg text-white transition-colors',
-              saving 
-                ? 'bg-teal-400 cursor-not-allowed' 
-                : 'bg-teal-600 hover:bg-teal-700'
-            )}
-            onClick={save}
-            disabled={saving}
-          >
-            {saving ? (
-              <span className="flex items-center">
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Guardando...
-              </span>
-            ) : (
-              'Guardar'
-            )}
-          </button>
+        {/* Footer con botones */}
+        <div className="px-2 py-4 border-t bg-white mt-4">
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2 rounded-lg border text-gray-700 hover:bg-gray-50"
+              disabled={saving}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={save}
+              disabled={saving || !form.nombre?.trim()}
+              className={cls(
+                'flex-1 px-4 py-2 rounded-lg text-white font-medium',
+                saving || !form.nombre?.trim()
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-teal-600 hover:bg-teal-700'
+              )}
+            >
+              {saving ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
         </div>
       </div>
     </ModalShell>
