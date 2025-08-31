@@ -1,10 +1,93 @@
-import React, { useMemo, useCallback } from 'react';
-import { Eye, ArrowRight } from 'lucide-react';
-import { mockData } from '../data/mockData';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
+import { Eye, ArrowRight, Calendar, RefreshCcw } from 'lucide-react';
+import { URL_CALENDAR_EVENTS } from '../config/n8n';
 import StatsCard from './StatsCard';
 import SearchInput from './SearchInput';
 import PatientTable from './PatientTable';
 import { Link } from 'react-router-dom';
+
+// Hook para obtener próximos turnos
+function useUpcomingTurnos() {
+  const [turnos, setTurnos] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const fetchTurnos = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      // Obtener turnos de hoy + próximos 7 días
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const nextWeek = new Date(today);
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      nextWeek.setHours(23, 59, 59, 999);
+
+      const fromISO = today.toISOString();
+      const toISO = nextWeek.toISOString();
+      const timeZone = 'America/Argentina/Buenos_Aires';
+      
+      const url = `${URL_CALENDAR_EVENTS}?from=${fromISO}&to=${toISO}&timeZone=${timeZone}`;
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      const events = data.events || [];
+      
+      // Convertir a formato para el dashboard
+      const formattedTurnos = events
+        .filter(event => {
+          const startDate = new Date(event.start || event.startTime);
+          return !isNaN(startDate.getTime()) && startDate >= today;
+        })
+        .map(event => {
+          const start = new Date(event.start || event.startTime);
+          const end = event.end ? new Date(event.end) : null;
+          
+          const fmtDate = new Intl.DateTimeFormat('es-AR', { 
+            weekday: 'long', 
+            day: '2-digit', 
+            month: 'long' 
+          });
+          const fmtTime = new Intl.DateTimeFormat('es-AR', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          });
+          
+          return {
+            id: event.id,
+            fecha: fmtDate.format(start),
+            hora: `${fmtTime.format(start)} hs${end && !isNaN(end.getTime()) ? ` - ${fmtTime.format(end)} hs` : ''}`,
+            paciente: event.patientName || event.paciente || 'Sin nombre',
+            tipo: event.title || event.summary || 'Consulta',
+            startDate: start,
+            htmlLink: event.htmlLink
+          };
+        })
+        .sort((a, b) => a.startDate - b.startDate)
+        .slice(0, 5); // Mostrar solo los próximos 5
+      
+      setTurnos(formattedTurnos);
+      
+    } catch (err) {
+      console.error('Error fetching upcoming turnos:', err);
+      setError('No se pudieron cargar los turnos: ' + err.message);
+      setTurnos([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTurnos();
+  }, [fetchTurnos]);
+
+  return { turnos, loading, error, refetch: fetchTurnos };
+}
 
 export default function DashboardView({ 
   dashboardSearchTerm, 
@@ -14,8 +97,11 @@ export default function DashboardView({
   onOpenRecord, 
   patients = [],
   latestPatients = [],
-  loading = false 
+  loading: patientsLoading = false 
 }) {
+  // Hook para turnos
+  const { turnos, loading: turnosLoading, error: turnosError, refetch: refetchTurnos } = useUpcomingTurnos();
+
   const filteredPacientes = useMemo(() => {
     const term = (dashboardSearchTerm || '').trim().toLowerCase();
 
@@ -40,7 +126,7 @@ export default function DashboardView({
 
     function ts(p) {
       if (!p) return 0;
-      if (typeof p._createdAt === 'number') return p._createdAt; // preferimos timestamp normalizado desde App
+      if (typeof p._createdAt === 'number') return p._createdAt;
       let raw = null;
       if (p.fechaRegistro) raw = p.fechaRegistro;
       else if (p['Fecha Registro']) raw = p['Fecha Registro'];
@@ -56,7 +142,6 @@ export default function DashboardView({
 
     const base = patients ? patients.slice() : [];
 
-    // Sin búsqueda: usamos latestPatients si viene desde App ya ordenado; si no, ordenamos por fecha desc
     if (!term) {
       if (latestPatients && latestPatients.length) {
         return latestPatients.slice(0, 4);
@@ -64,7 +149,6 @@ export default function DashboardView({
       return base.sort((a, b) => ts(b) - ts(a)).slice(0, 4);
     }
 
-    // Con búsqueda: filtramos y ordenamos por fecha desc para mantener la noción de "más recientes"
     return base
       .filter((p) => {
         const name = (p && p.nombre) ? p.nombre : '';
@@ -81,50 +165,154 @@ export default function DashboardView({
 
   const handleSearchChange = useCallback((e) => setDashboardSearchTerm(e.target.value), [setDashboardSearchTerm]);
 
+  // Stats dinámicos
+  const turnosHoy = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    return turnos.filter(turno => {
+      if (turno.startDate) {
+        return turno.startDate >= today && turno.startDate < tomorrow;
+      }
+      return false;
+    }).length;
+  }, [turnos]);
+
+  const turnosSemana = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    
+    return turnos.filter(turno => {
+      if (turno.startDate) {
+        return turno.startDate >= today && turno.startDate < nextWeek;
+      }
+      return false;
+    }).length;
+  }, [turnos]);
+
   return (
     <div className="p-4 lg:p-8 bg-gray-50 min-h-screen">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
-        <StatsCard title="Turnos de hoy" value={mockData.stats.turnosHoy} color="text-teal-600" />
-        <StatsCard title="Turnos de la semana" value={mockData.stats.turnosSemana} color="text-gray-900" />
-        <StatsCard title="Pacientes" value={loading ? "..." : patients.length} color="text-gray-900" />
+        <StatsCard 
+          title="Turnos de hoy" 
+          value={turnosLoading ? "..." : turnosHoy} 
+          color="text-teal-600" 
+        />
+        <StatsCard 
+          title="Turnos de la semana" 
+          value={turnosLoading ? "..." : turnosSemana} 
+          color="text-gray-900" 
+        />
+        <StatsCard 
+          title="Pacientes" 
+          value={patientsLoading ? "..." : patients.length} 
+          color="text-gray-900" 
+        />
       </div>
 
       <div className="space-y-6 lg:space-y-8">
+        {/* Sección de Próximos Turnos */}
         <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-4 lg:p-6 border-b flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-800">Próximos Turnos</h2>
-            <Link
-              to="/turnos"
-              className="inline-flex items-center text-teal-600 hover:text-teal-700 text-sm font-medium"
-            >
-              Ver todos
-              <ArrowRight size={16} className="ml-1" />
-            </Link>
+          <div className="p-4 lg:p-6 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold text-gray-800">Próximos Turnos</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={refetchTurnos}
+                disabled={turnosLoading}
+                className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                title="Actualizar turnos"
+              >
+                <RefreshCcw size={14} className={turnosLoading ? 'animate-spin' : ''} />
+                <span className="hidden sm:inline">Actualizar</span>
+              </button>
+              <Link
+                to="/turnos"
+                className="inline-flex items-center text-teal-600 hover:text-teal-700 text-sm font-medium"
+              >
+                Ver todos
+                <ArrowRight size={16} className="ml-1" />
+              </Link>
+            </div>
           </div>
+          
           <div className="p-4 lg:p-6">
-            <div className="space-y-4">
-              {mockData.proximosTurnos.map((turno, index) => (
-                <div key={`turno-${index}`} className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 py-3 border-b border-gray-100 last:border-b-0">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0"></div>
-                    <div>
-                      <p className="text-sm text-gray-500">{turno.fecha}</p>
-                      <p className="text-sm text-gray-500">{turno.hora}</p>
+            {turnosLoading && (
+              <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                <RefreshCcw size={16} className="animate-spin" />
+                Cargando turnos...
+              </div>
+            )}
+            
+            {!turnosLoading && turnosError && (
+              <div className="p-4 rounded-lg border text-sm bg-red-50 text-red-900 border-red-200 mb-4">
+                {turnosError}
+              </div>
+            )}
+            
+            {!turnosLoading && !turnosError && turnos.length === 0 && (
+              <div className="text-center py-6 text-gray-500">
+                <Calendar size={32} className="mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No hay turnos programados para los próximos días</p>
+                <Link
+                  to="/turnos"
+                  className="inline-flex items-center gap-1 mt-2 text-teal-600 hover:text-teal-700 text-sm"
+                >
+                  <Calendar size={14} />
+                  Ir al calendario
+                </Link>
+              </div>
+            )}
+            
+            {!turnosLoading && turnos.length > 0 && (
+              <div className="space-y-4">
+                {turnos.map((turno) => (
+                  <div key={turno.id} className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 py-3 border-b border-gray-100 last:border-b-0">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0"></div>
+                      <div>
+                        <p className="text-sm text-gray-500 capitalize">{turno.fecha}</p>
+                        <p className="text-sm text-gray-500">{turno.hora}</p>
+                      </div>
+                    </div>
+                    <div className="flex-1 sm:ml-4">
+                      <p className="font-medium text-gray-900">{turno.paciente}</p>
+                      <p className="text-sm text-gray-500">{turno.tipo}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {turno.htmlLink && turno.htmlLink !== '#' && (
+                        <a
+                          href={turno.htmlLink}
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="text-gray-400 hover:text-gray-600"
+                          title="Abrir en Google Calendar"
+                        >
+                          <Eye size={16} />
+                        </a>
+                      )}
+                      {(!turno.htmlLink || turno.htmlLink === '#') && (
+                        <button 
+                          className="text-gray-400 hover:text-gray-600"
+                          onClick={() => console.log('Ver turno:', turno)}
+                        >
+                          <Eye size={16} />
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <div className="flex-1 sm:ml-4">
-                    <p className="font-medium text-gray-900">{turno.paciente}</p>
-                    <p className="text-sm text-gray-500">{turno.tipo}</p>
-                  </div>
-                  <button className="text-gray-400 hover:text-gray-600 self-start sm:self-center">
-                    <Eye size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
+        {/* Sección de Últimos Pacientes */}
         <div className="bg-white rounded-lg shadow-sm border">
           <div className="p-4 lg:p-6 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
             <div className="flex items-center gap-3">
@@ -149,7 +337,7 @@ export default function DashboardView({
               />
               <button 
                 onClick={onAddPatient} 
-                disabled={loading}
+                disabled={patientsLoading}
                 className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Agregar
@@ -157,7 +345,7 @@ export default function DashboardView({
             </div>
           </div>
           
-          {loading ? (
+          {patientsLoading ? (
             <div className="p-8 text-center">
               <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-teal-600"></div>
             </div>

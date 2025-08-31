@@ -1,6 +1,7 @@
 // src/components/TurnosView.jsx
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Calendar, RefreshCcw, ExternalLink, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { URL_CALENDAR_EVENTS } from '../config/n8n';
 
 // Helpers de fechas (sin librerías)
 const startOfDay = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
@@ -29,53 +30,24 @@ function groupByDate(events) {
   const by = {};
   for (const ev of events) {
     const dayKey = (ev.start || ev.startTime || ev.startDate || ev.start_at);
+    if (!dayKey) continue; // Skip events without start time
+    
     const d = new Date(dayKey);
+    if (isNaN(d.getTime())) continue; // Skip invalid dates
+    
     const key = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString();
     if (!by[key]) by[key] = [];
     by[key].push(ev);
   }
   // ordenar por hora
   for (const k of Object.keys(by)) {
-    by[k].sort((a,b)=> new Date(a.start) - new Date(b.start));
+    by[k].sort((a,b)=> {
+      const startA = new Date(a.start || a.startTime);
+      const startB = new Date(b.start || b.startTime);
+      return startA - startB;
+    });
   }
   return Object.keys(by).sort().map(k => ({ date: new Date(k), items: by[k] }));
-}
-
-// Generador de eventos mock (sin backend)
-function generateMockEvents(range) {
-  const names = ['Benjamin Torres Lemos', 'Agustin Corbalan', 'Esteban Alvarez Farhat', 'Facundo Salado'];
-  const obras = ['OSDE', 'Swiss Medical', 'Medicus', 'Medifé'];
-  const titles = ['Consulta General', 'Arreglo de Caries', 'Extracción', 'Control'];
-  const times = [
-    [10, 30],
-    [15, 0],
-    [15, 30],
-  ];
-
-  const result = [];
-  let day = new Date(range.from);
-  while (day <= range.to) {
-    const perDay = (day.getDay() % 2 === 0) ? 2 : 1; // 1-2 turnos por día
-    for (let i = 0; i < perDay; i++) {
-      const start = new Date(day);
-      const [h, m] = times[i % times.length];
-      start.setHours(h, m, 0, 0);
-      const end = new Date(start);
-      end.setMinutes(end.getMinutes() + 30);
-      const idx = (day.getDate() + i) % names.length;
-      result.push({
-        id: `${start.toISOString()}-${i}`,
-        start: start.toISOString(),
-        end: end.toISOString(),
-        title: titles[idx % titles.length],
-        patientName: names[idx],
-        description: obras[idx],
-        htmlLink: '#',
-      });
-    }
-    day = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1);
-  }
-  return result;
 }
 
 export default function TurnosView() {
@@ -93,29 +65,93 @@ export default function TurnosView() {
     if (mode === 'semana') {
       return { from: startOfWeek(baseDate), to: endOfWeek(baseDate) };
     }
-    // agenda: hoy + próximos 7 días
+    // agenda: hoy + próximos 7 días (desde baseDate)
     return { from: startOfDay(baseDate), to: endOfDay(addDays(baseDate, 6)) };
   }, [mode, baseDate]);
 
-  const fetchEvents = useCallback(() => {
+  const fetchEvents = useCallback(async () => {
     setLoading(true);
     setError('');
-    // Simulación de carga
-    const data = generateMockEvents(range);
-    setEvents(data);
-    setLoading(false);
-  }, [range]);
+    
+    try {
+      // Formatear fechas para el webhook
+      const fromISO = range.from.toISOString();
+      const toISO = range.to.toISOString();
+      const timeZone = 'America/Argentina/Buenos_Aires';
+      
+      const url = `${URL_CALENDAR_EVENTS}?from=${fromISO}&to=${toISO}&timeZone=${timeZone}`;
+      
+      console.log(`📅 Solicitando ${mode}:`, {
+        from: range.from.toLocaleDateString('es-AR'),
+        to: range.to.toLocaleDateString('es-AR'),
+        url
+      });
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log(`✅ Eventos recibidos para ${mode}:`, data.events?.length || 0);
+      
+      setEvents(data.events || []);
+      
+    } catch (err) {
+      setError('No se pudieron cargar los turnos: ' + err.message);
+      console.error('❌ Error fetching events:', err);
+      setEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [range, mode]); // Añadido mode como dependencia para debug
 
-  useEffect(() => { fetchEvents(); }, [fetchEvents]);
+  useEffect(() => { 
+    fetchEvents(); 
+  }, [fetchEvents]);
 
   const grouped = useMemo(() => groupByDate(events), [events]);
 
   // navegación de fechas
   const goToday = () => setBaseDate(new Date());
-  const goPrev = () => setBaseDate(prev => mode === 'dia' ? addDays(prev,-1) : addDays(prev,-7));
-  const goNext = () => setBaseDate(prev => mode === 'dia' ? addDays(prev, 1) : addDays(prev, 7));
+  
+  const goPrev = () => {
+    setBaseDate(prev => {
+      if (mode === 'dia') {
+        return addDays(prev, -1);
+      } else if (mode === 'semana') {
+        return addDays(prev, -7);
+      } else { // agenda
+        return addDays(prev, -7);
+      }
+    });
+  };
+  
+  const goNext = () => {
+    setBaseDate(prev => {
+      if (mode === 'dia') {
+        return addDays(prev, 1);
+      } else if (mode === 'semana') {
+        return addDays(prev, 7);
+      } else { // agenda
+        return addDays(prev, 7);
+      }
+    });
+  };
 
-  const calLink = process.env.REACT_APP_CAL_LINK || 'https://cal.com/chill-digital';
+  const calLink = process.env.REACT_APP_CAL_LINK || 'https://cal.com/chill-digital/consulta-general';
+
+  // Función para formatear el título del rango de fechas
+  const formatDateRange = () => {
+    if (mode === 'dia') {
+      return fmtDay.format(baseDate);
+    } else if (mode === 'semana') {
+      return `${fmtDay.format(range.from).split(',')[0]} — ${fmtDay.format(range.to).split(',')[0]}`;
+    } else {
+      // agenda
+      return `Agenda desde ${fmtDay.format(baseDate).split(',')[0]}`;
+    }
+  };
 
   return (
     <div className="p-4 lg:p-8 bg-gray-50 min-h-screen">
@@ -125,6 +161,11 @@ export default function TurnosView() {
           <div className="flex items-center gap-3">
             <Calendar className="text-teal-600" size={20} />
             <h2 className="text-lg font-semibold text-gray-800">Calendario</h2>
+            {process.env.NODE_ENV === 'development' && (
+              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                {mode} | {events.length} eventos
+              </span>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -134,7 +175,9 @@ export default function TurnosView() {
                 <button
                   key={m}
                   onClick={() => setMode(m)}
-                  className={`px-3 py-2 text-sm ${mode===m ? 'bg-white text-teal-700 font-medium' : 'text-gray-600 hover:bg-white'}`}
+                  className={`px-3 py-2 text-sm transition-colors ${
+                    mode===m ? 'bg-white text-teal-700 font-medium shadow-sm' : 'text-gray-600 hover:bg-white hover:text-gray-900'
+                  }`}
                 >
                   {m === 'agenda' ? 'Agenda' : m === 'semana' ? 'Semana' : 'Día'}
                 </button>
@@ -143,32 +186,45 @@ export default function TurnosView() {
 
             {/* Navegación fecha */}
             <div className="flex items-center gap-1 ml-1">
-              <button onClick={goPrev} className="p-2 rounded-lg border hover:bg-gray-50">
+              <button 
+                onClick={goPrev} 
+                className="p-2 rounded-lg border hover:bg-gray-50 transition-colors"
+                title="Anterior"
+              >
                 <ChevronLeft size={16} />
               </button>
-              <div className="px-3 py-2 text-sm text-gray-700 bg-gray-50 rounded-lg border">
-                {mode === 'semana'
-                  ? `${fmtDay.format(range.from)} — ${fmtDay.format(range.to)}`
-                  : fmtDay.format(baseDate)}
+              <div className="px-3 py-2 text-sm text-gray-700 bg-gray-50 rounded-lg border min-w-[200px] text-center">
+                {formatDateRange()}
               </div>
-              <button onClick={goNext} className="p-2 rounded-lg border hover:bg-gray-50">
+              <button 
+                onClick={goNext} 
+                className="p-2 rounded-lg border hover:bg-gray-50 transition-colors"
+                title="Siguiente"
+              >
                 <ChevronRight size={16} />
               </button>
-              <button onClick={goToday} className="ml-1 px-3 py-2 rounded-lg border text-sm hover:bg-gray-50">Hoy</button>
+              <button 
+                onClick={goToday} 
+                className="ml-1 px-3 py-2 rounded-lg border text-sm hover:bg-gray-50 transition-colors"
+              >
+                Hoy
+              </button>
             </div>
 
             {/* Acciones */}
             <button
               onClick={fetchEvents}
-              className="ml-2 inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm hover:bg-gray-50"
+              disabled={loading}
+              className="ml-2 inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm hover:bg-gray-50 disabled:opacity-50 transition-colors"
               title="Sincronizar"
             >
-              <RefreshCcw size={16} /> Sincronizar
+              <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} /> 
+              Sincronizar
             </button>
             <a
               href={calLink}
               target="_blank" rel="noreferrer"
-              className="inline-flex items-center gap-2 bg-teal-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-teal-700"
+              className="inline-flex items-center gap-2 bg-teal-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-teal-700 transition-colors"
             >
               <Plus size={16} /> Nuevo turno
             </a>
@@ -178,50 +234,78 @@ export default function TurnosView() {
         {/* Contenido */}
         <div className="p-4 lg:p-6">
           {loading && (
-            <div className="text-sm text-gray-600">Cargando turnos…</div>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <RefreshCcw size={16} className="animate-spin" />
+              Cargando turnos para {mode === 'agenda' ? 'agenda' : mode === 'semana' ? 'la semana' : 'el día'}…
+            </div>
           )}
+          
           {!loading && error && (
-            <div className="p-4 rounded-lg border bg-yellow-50 text-yellow-900 text-sm">
+            <div className="p-4 rounded-lg border text-sm bg-red-50 text-red-900 border-red-200">
               {error}
             </div>
           )}
 
           {!loading && !error && grouped.length === 0 && (
-            <div className="text-sm text-gray-600">No hay turnos en este rango.</div>
+            <div className="text-center py-8 text-gray-500">
+              <Calendar size={48} className="mx-auto mb-3 opacity-50" />
+              <p>No hay turnos programados para este período</p>
+              <p className="text-sm mt-2">
+                {mode === 'dia' && 'Intenta cambiar de día o revisar la semana completa'}
+                {mode === 'semana' && 'Intenta cambiar de semana o revisar la agenda general'}
+                {mode === 'agenda' && 'Intenta cambiar el período de la agenda'}
+              </p>
+              <a
+                href={calLink}
+                target="_blank" rel="noreferrer"
+                className="inline-flex items-center gap-2 mt-3 text-teal-600 hover:text-teal-700 text-sm transition-colors"
+              >
+                <Plus size={16} /> Programar nuevo turno
+              </a>
+            </div>
           )}
 
           {!loading && !error && grouped.map(({ date, items }) => (
             <div key={date.toISOString()} className="mb-5">
-              <div className="text-sm font-semibold text-gray-700 mb-3">
+              <div className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                 {fmtDay.format(date)}
+                <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
+                  {items.length} turno{items.length !== 1 ? 's' : ''}
+                </span>
               </div>
               <ul className="space-y-2">
                 {items.map(ev => {
                   const start = new Date(ev.start || ev.startTime);
-                  const end   = ev.end ? new Date(ev.end) : null;
+                  const end = ev.end ? new Date(ev.end) : null;
                   const title = ev.title || ev.summary || 'Turno';
-                  const who   = ev.patientName || ev.paciente || '';
+                  const who = ev.patientName || ev.paciente || '';
                   const small = ev.description || ev.location || '';
+                  
+                  // Validar que la fecha sea válida
+                  if (isNaN(start.getTime())) {
+                    return null;
+                  }
+                  
                   return (
-                    <li key={ev.id || `${start.toISOString()}-${title}`} className="p-3 border rounded-lg hover:bg-gray-50 flex items-start justify-between">
+                    <li key={ev.id || `${start.toISOString()}-${title}`} className="p-3 border rounded-lg hover:bg-gray-50 flex items-start justify-between transition-colors">
                       <div className="flex items-start gap-3">
-                        <span className="mt-1 inline-block w-2.5 h-2.5 rounded-full bg-teal-500" />
-                        <div>
+                        <span className="mt-1 inline-block w-2.5 h-2.5 rounded-full bg-teal-500 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
                           <div className="text-gray-900 text-sm font-medium">
                             {fmtTime.format(start)}
-                            {end ? ` – ${fmtTime.format(end)}` : ''} · {title}{who ? ` — ${who}` : ''}
+                            {end && !isNaN(end.getTime()) ? ` – ${fmtTime.format(end)}` : ''} · {title}{who ? ` — ${who}` : ''}
                           </div>
-                          {small ? (
-                            <div className="text-xs text-gray-600 mt-0.5">{small}</div>
-                          ) : null}
+                          {small && (
+                            <div className="text-xs text-gray-600 mt-0.5 break-words">{small}</div>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {ev.htmlLink && (
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                        {ev.htmlLink && ev.htmlLink !== '#' && (
                           <a
                             href={ev.htmlLink}
                             target="_blank" rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+                            className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors"
                             title="Abrir en Google Calendar"
                           >
                             <ExternalLink size={16} />
