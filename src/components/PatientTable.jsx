@@ -12,23 +12,6 @@ export default React.memo(function PatientTable({ patients, onView, onOpenRecord
       setIsDeleting(false);
     }
   }, [patients, pendingDelete]);
-
-  // Función para confirmar eliminación
-  const confirmDelete = async () => {
-    if (!pendingDelete || !onDelete) return;
-    
-    setIsDeleting(true);
-    try {
-      await onDelete(pendingDelete);
-      setPendingDelete(null);
-    } catch (error) {
-      console.error('Error al eliminar paciente:', error);
-      // Aquí podrías mostrar un mensaje de error al usuario
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-full">
@@ -44,27 +27,12 @@ export default React.memo(function PatientTable({ patients, onView, onOpenRecord
         <tbody>
           {patients.map((paciente) => (
             <tr key={paciente.id} className="group border-b hover:bg-gray-50">
-              <td className="p-3 lg:p-4 text-sm whitespace-nowrap">
-                <button 
-                  type="button" 
-                  onClick={() => onView && onView(paciente)} 
-                  onKeyDown={(e) => { 
-                    if (e.key === 'Enter' || e.key === ' ') { 
-                      e.preventDefault(); 
-                      onView && onView(paciente); 
-                    } 
-                  }} 
-                  className="p-0 m-0 bg-transparent text-left text-gray-900 hover:underline focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-sm cursor-pointer" 
-                  aria-label={`Ver perfil de ${paciente.nombre}`}
-                >
-                  {paciente.nombre}
-                </button>
-              </td>
+              <td className="p-3 lg:p-4 text-sm whitespace-nowrap"><button type="button" onClick={() => onView && onView(paciente)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView && onView(paciente); } }} className="p-0 m-0 bg-transparent text-left text-gray-900 hover:underline focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-sm cursor-pointer" aria-label={`Ver perfil de ${paciente.nombre}`}>{paciente.nombre}</button></td>
               <td className="p-3 lg:p-4 text-sm text-blue-600 whitespace-nowrap">{paciente.obraSocial}</td>
               <td className="p-3 lg:p-4 text-sm whitespace-nowrap">
                 <button
                   type="button"
-                  onClick={() => onOpenRecord && onOpenRecord(paciente)}
+                  onClick={() => onOpenRecord && onOpenRecord(historiaClinicaUrl)}
                   className="text-teal-600 hover:underline font-medium"
                   aria-label={`Abrir historia clínica de ${paciente.nombre}`}
                 >
@@ -81,22 +49,19 @@ export default React.memo(function PatientTable({ patients, onView, onOpenRecord
                   >
                     <Eye size={16} />
                   </button>
-                  {onDelete && (
-                    <button
-                      className="inline-flex items-center rounded-md p-1.5 text-gray-600 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-300"
-                      onClick={() => setPendingDelete(paciente)}
-                      aria-label={`Eliminar ${paciente.nombre}`}
-                    >
-                      <XCircle size={16} />
-                    </button>
-                  )}
+                  <button
+                    className="inline-flex items-center rounded-md p-1.5 text-gray-600 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-300"
+                    onClick={() => setPendingDelete(paciente)}
+                    aria-label={`Eliminar ${paciente.nombre}`}
+                  >
+                    <XCircle size={16} />
+                  </button>
                 </div>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-      
       {pendingDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
@@ -123,9 +88,9 @@ export default React.memo(function PatientTable({ patients, onView, onOpenRecord
                 type="button"
                 className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
                 onClick={confirmDelete}
-                disabled={isDeleting}
+                disabled={deleting}
               >
-                {isDeleting ? 'Eliminando…' : 'Sí, eliminar'}
+                {deleting ? 'Eliminando…' : 'Sí, eliminar'}
               </button>
             </div>
           </div>

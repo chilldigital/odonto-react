@@ -50,7 +50,7 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
   const numeroAfiliado = getField(patient, ['numeroAfiliado', 'Numero Afiliado', 'Número Afiliado', 'numero_afiliado']);
   const alergia = getField(patient, ['alergia', 'alergias', 'Alergias', 'allergies'], 'Ninguna');
   const antecedentes = getField(patient, ['antecedentes', 'Antecedentes', 'medical_history'], 'Ninguno');
-  const historiaClinica = getField(patient, ['historiaClinica', 'historia_clinica', 'Historia Clinica'], 'Sin archivo');
+  const historiaClinicaUrl = getField(patient, ['historiaClinicaUrl', 'historia_clinica', 'Historia Clinica'], 'Sin archivo');
   const estado = getField(patient, ['estado', 'Estado', 'status'], 'Activo');
   const notas = getField(patient, ['notas', 'Notas', 'notes', 'observaciones'], 'Sin notas');
 
@@ -236,7 +236,7 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
           <InfoRow 
             icon={FileText} 
             label="Historia Clínica" 
-            value={historiaClinica} 
+            value={historiaClinicaUrl} 
           />
 
           {/* 9. Estado */}
