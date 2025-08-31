@@ -69,7 +69,7 @@ function useUpcomingTurnos() {
           };
         })
         .sort((a, b) => a.startDate - b.startDate)
-        .slice(0, 5); // Mostrar solo los próximos 5
+        .slice(0, 3); // Mostrar solo los próximos 3
       
       setTurnos(formattedTurnos);
       
@@ -84,9 +84,14 @@ function useUpcomingTurnos() {
 
   useEffect(() => {
     fetchTurnos();
+    
+    // Actualizar turnos automáticamente cada 5 minutos
+    const interval = setInterval(fetchTurnos, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
   }, [fetchTurnos]);
 
-  return { turnos, loading, error, refetch: fetchTurnos };
+  return { turnos, loading, error };
 }
 
 export default function DashboardView({ 
@@ -100,7 +105,7 @@ export default function DashboardView({
   loading: patientsLoading = false 
 }) {
   // Hook para turnos
-  const { turnos, loading: turnosLoading, error: turnosError, refetch: refetchTurnos } = useUpcomingTurnos();
+  const { turnos, loading: turnosLoading, error: turnosError } = useUpcomingTurnos();
 
   const filteredPacientes = useMemo(() => {
     const term = (dashboardSearchTerm || '').trim().toLowerCase();
@@ -221,16 +226,18 @@ export default function DashboardView({
             <div className="flex items-center gap-3">
               <h2 className="text-lg font-semibold text-gray-800">Próximos Turnos</h2>
             </div>
+            
             <div className="flex items-center gap-2">
-              <button
-                onClick={refetchTurnos}
-                disabled={turnosLoading}
-                className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-50"
-                title="Actualizar turnos"
+              <a
+                href="https://turnos.chilldigital.tech"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
               >
-                <RefreshCcw size={14} className={turnosLoading ? 'animate-spin' : ''} />
-                <span className="hidden sm:inline">Actualizar</span>
-              </button>
+                <Calendar size={14} />
+                Nuevo
+              </a>
+              
               <Link
                 to="/turnos"
                 className="inline-flex items-center text-teal-600 hover:text-teal-700 text-sm font-medium"
@@ -340,7 +347,7 @@ export default function DashboardView({
                 disabled={patientsLoading}
                 className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Agregar
+                Nuevo             
               </button>
             </div>
           </div>
