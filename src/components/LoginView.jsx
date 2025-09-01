@@ -1,192 +1,79 @@
 // src/components/LoginView.jsx
-import React, { useState } from "react";
-import { Eye, EyeOff, Mail, Lock, LogIn, Shield } from "lucide-react";
+import React from "react";
+import { Shield } from "lucide-react";
+
+// Simple Google "G" SVG to avoid external asset fetch
+const GoogleG = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
+    <path fill="#EA4335" d="M24 9.5c3.54 0 6.72 1.22 9.22 3.6l6.9-6.9C35.9 1.9 30.3 0 24 0 14.62 0 6.5 5.38 2.56 13.22l8.02 6.22C12.34 13.38 17.69 9.5 24 9.5z"/>
+    <path fill="#4285F4" d="M46.5 24c0-1.64-.15-3.22-.43-4.75H24v9h12.7c-.55 2.95-2.26 5.45-4.8 7.12l7.36 5.73C43.65 37.52 46.5 31.28 46.5 24z"/>
+    <path fill="#FBBC05" d="M10.58 27.44A14.47 14.47 0 0 1 9.5 24c0-1.2.21-2.36.58-3.44l-8.02-6.22A23.86 23.86 0 0 0 0 24c0 3.87.93 7.53 2.56 10.66l8.02-6.22z"/>
+    <path fill="#34A853" d="M24 48c6.3 0 11.62-2.07 15.49-5.62l-7.36-5.73c-2.05 1.38-4.7 2.2-8.13 2.2-6.31 0-11.66-4.24-13.55-9.94l-8 6.2C6.73 43.7 14.73 48 24 48z"/>
+  </svg>
+);
 
 export default function LoginView({ onSuccess }) {
-  const [email, setEmail] = useState("");
-  const [pass, setPass] = useState("");
-  const [show, setShow] = useState(false);
-  const [remember, setRemember] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState("");
+  const googleAuthUrl = process.env.REACT_APP_AUTH_GOOGLE_URL; // endpoint OAuth (Auth proxy / backend)
 
-  const n8nBase = process.env.REACT_APP_N8N_BASE;            // opcional
-  const googleAuthUrl = process.env.REACT_APP_AUTH_GOOGLE_URL; // opcional (Auth0/Clerk/etc.)
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setErr("");
-    setLoading(true);
-
-    try {
-      // === MODO A: login contra n8n (habilitalo cuando tengas el webhook) ===
-      // if (n8nBase) {
-      //   const res = await fetch(`${n8nBase}/webhook/login`, {
-      //     method: "POST",
-      //     headers: { "Content-Type": "application/json" },
-      //     body: JSON.stringify({ email, password: pass }),
-      //   });
-      //   const json = await res.json();
-      //   if (!res.ok || !json.token) throw new Error(json.message || "Credenciales inválidas");
-      //   if (remember) localStorage.setItem("token", json.token);
-      //   onSuccess ? onSuccess() : (window.location.href = "/");
-      //   return;
-      // }
-
-      // === MODO B: simulación local (dev) mientras no hay backend ===
-      if (!email || !pass) throw new Error("Completá email y contraseña");
-      const fakeToken = "dev-token-" + Math.random().toString(36).slice(2);
-      if (remember) localStorage.setItem("token", fakeToken);
-      onSuccess ? onSuccess() : (window.location.href = "/");
-    } catch (e) {
-      setErr(e.message || "No se pudo iniciar sesión");
-    } finally {
-      setLoading(false);
+  const enterWithoutLogin = () => {
+    if (typeof onSuccess === "function") {
+      onSuccess(); // deja que la app cambie de estado a "logueado"
+    } else {
+      window.location.assign("/"); // navegación sin depender del Router
     }
-  }
+  };
 
   return (
     <>
       <style>{`
         .brand-bg { background-color: #0C9488 !important; }
         .brand-text { color: #0C9488 !important; }
-        .brand-btn {
-          background-color: #0C9488 !important;
-          color: #fff !important;
-        }
-        .brand-btn:hover { background-color: #097C73 !important; } /* shade for hover */
-        .brand-ring:focus {
-          outline: none !important;
-          box-shadow: 0 0 0 2px #0C9488 !important;
-        }
+        .brand-btn { background-color: #0C9488 !important; color: #fff !important; }
+        .brand-btn:hover { background-color: #097C73 !important; }
+        .brand-ring:focus { outline: none !important; box-shadow: 0 0 0 2px #0C9488 !important; }
       `}</style>
-    <div className="min-h-screen bg-gray-50 grid lg:grid-cols-2">
-      {/* Panel ilustración */}
-      <div className="hidden lg:flex flex-col justify-between p-10 brand-bg text-white">
-        <div />
-        <div>
-          <div className="text-3xl font-bold leading-tight">
-            ¡Bienvenida a tu consultorio digital! 👋🏻
+
+      <div className="min-h-screen bg-gray-50 grid lg:grid-cols-2">
+        {/* Panel ilustración */}
+        <div className="hidden lg:flex flex-col justify-between p-10 brand-bg text-white">
+          <div />
+          <div>
+            <div className="text-3xl font-bold leading-tight">¡Bienvenida a tu consultorio digital! 👋🏻</div>
+            <p className="mt-3 text-white/80">Accedé a tus pacientes y turnos desde un solo lugar.</p>
           </div>
-          <p className="mt-3 text-white/80">
-            Accedé a tus pacientes y turnos desde un solo lugar.
-          </p>
+          <div className="flex items-center gap-2 opacity-90">
+            <Shield size={16} />
+            <span className="text-sm">Datos protegidos con inicio seguro</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2 opacity-90">
-          <Shield size={16} />
-          <span className="text-sm">Datos protegidos con inicio seguro</span>
-        </div>
-      </div>
 
-      {/* Panel formulario */}
-      <div className="flex items-center justify-center p-8">
-        <div className="w-full max-w-md bg-white border rounded-2xl shadow-sm p-8">
-          <h1 className="text-3xl font-semibold text-gray-900">Login</h1>
-          <p className="text-gray-500 mt-2">
-            Ingresá tus credenciales para acceder.
-          </p>
+        {/* Panel "solo Google" + botón temporal */}
+        <div className="flex items-center justify-center p-8">
+          <div className="w-full max-w-md bg-white border rounded-2xl shadow-sm p-8">
+            <h1 className="text-3xl font-semibold text-gray-900">Login</h1>
+            <p className="text-gray-500 mt-2">Ingresá con tu cuenta de Google.</p>
 
-          {/* OAuth opcional */}
-          {googleAuthUrl && (
             <a
-              href={googleAuthUrl}
-              className="mt-6 w-full inline-flex items-center justify-center gap-2 bg-white border rounded-lg px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              href={googleAuthUrl || '#'}
+              onClick={(e) => { if (!googleAuthUrl) e.preventDefault(); }}
+              aria-disabled={!googleAuthUrl}
+              className={`mt-6 w-full inline-flex items-center justify-center gap-2 bg-white border rounded-lg px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 shadow-sm ${!googleAuthUrl ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
-              <img
-                alt="Google"
-                src="https://www.google.com/favicon.ico"
-                className="w-4 h-4"
-              />
+              <GoogleG size={18} />
               Continuar con Google
             </a>
-          )}
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <div className="mt-1 relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  <Mail size={16} />
-                </span>
-                <input
-                  type="email"
-                  autoComplete="email"
-                  className="w-full pl-9 pr-3 py-2 border rounded-lg focus:outline-none brand-ring"
-                  placeholder="tu@correo.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Contraseña
-              </label>
-              <div className="mt-1 relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  <Lock size={16} />
-                </span>
-                <input
-                  type={show ? "text" : "password"}
-                  autoComplete="current-password"
-                  className="w-full pl-9 pr-10 py-2 border rounded-lg focus:outline-none brand-ring"
-                  placeholder="••••••••"
-                  value={pass}
-                  onChange={(e) => setPass(e.target.value)}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShow((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  aria-label={show ? "Ocultar" : "Mostrar"}
-                >
-                  {show ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <label className="inline-flex items-center gap-2 text-sm text-gray-600">
-                <input
-                  type="checkbox"
-                  checked={remember}
-                  onChange={(e) => setRemember(e.target.checked)}
-                  className="rounded"
-                />
-                Recordarme
-              </label>
-              <a href="#" className="text-sm brand-text hover:underline">
-                ¿Olvidaste tu contraseña?
-              </a>
-            </div>
-
-            {err && (
-              <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md p-2">
-                {err}
-              </div>
-            )}
-
+            {/* Botón temporal sin depender de Router */}
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full inline-flex items-center justify-center gap-2 brand-btn rounded-lg px-4 py-2"
+              type="button"
+              onClick={enterWithoutLogin}
+              className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm brand-btn"
             >
-              <LogIn size={16} />
-              {loading ? "Ingresando..." : "Ingresar"}
+              Entrar sin login (temporal)
             </button>
-          </form>
-
-          <p className="mt-6 text-xs text-gray-500">
-            Al iniciar sesión aceptás términos y políticas de privacidad.
-          </p>
+          </div>
         </div>
       </div>
-    </div>
     </>
   );
 }
