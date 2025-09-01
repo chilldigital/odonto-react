@@ -3,101 +3,109 @@ import React, { useState } from "react";
 import { Shield, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
 
 export default function LoginView({ onSuccess }) {
-  const [credentials, setCredentials] = useState({ username: '', password: '' });
+  const [credentials, setCredentials] = useState({
+    username: "",
+    password: "",
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const n8nBaseUrl = process.env.REACT_APP_N8N_BASE || 'https://n8n-automation.chilldigital.tech';
+  const n8nBaseUrl =
+    process.env.REACT_APP_N8N_BASE ||
+    "https://n8n-automation.chilldigital.tech";
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setCredentials(prev => ({ ...prev, [name]: value }));
-    if (error) setError('');
-    if (success) setSuccess('');
+    setCredentials((prev) => ({ ...prev, [name]: value }));
+    if (error) setError("");
+    if (success) setSuccess("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!credentials.username.trim() || !credentials.password.trim()) {
-      setError('Por favor completa todos los campos');
+      setError("Por favor completa todos los campos");
       return;
     }
 
     setLoading(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     try {
       console.log(`🔍 Intentando login: ${credentials.username}`);
 
       const response = await fetch(`${n8nBaseUrl}/webhook/auth-login`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           username: credentials.username.trim(),
           password: credentials.password,
-          timestamp: new Date().toISOString()
-        })
+          timestamp: new Date().toISOString(),
+        }),
       });
 
       const data = await response.json();
-      console.log('📥 Auth Response:', data);
+      console.log("📥 Auth Response:", data);
 
       if (data.success && data.token) {
-        console.log('✅ Login exitoso');
+        console.log("✅ Login exitoso");
         setSuccess(`¡Bienvenido ${data.user?.name || credentials.username}!`);
-        
+
         // Pequeño delay para mostrar el mensaje de éxito
         setTimeout(() => {
+          try {
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("user", JSON.stringify(data.user));
+          } catch (e) {
+            console.error("Error guardando credenciales:", e);
+          }
           if (typeof onSuccess === "function") {
-            onSuccess(data.token);
+            onSuccess({ token: data.token, user: data.user });
           } else {
-            try {
-              localStorage.setItem('token', data.token);
-              localStorage.setItem('user', JSON.stringify(data.user));
-              window.location.assign("/");
-            } catch (e) {
-              console.error('Error guardando token:', e);
-              window.location.assign("/");
-            }
+            window.location.assign("/");
           }
         }, 1000);
-        
       } else {
         // Manejar diferentes tipos de errores
         switch (data.code) {
-          case 'RATE_LIMITED':
-          case 'ACCOUNT_LOCKED':
+          case "RATE_LIMITED":
+          case "ACCOUNT_LOCKED":
             setError(`🚫 ${data.message}`);
             break;
-          case 'INVALID_CREDENTIALS':
-            setError('❌ Usuario o contraseña incorrectos');
+          case "INVALID_CREDENTIALS":
+            setError("❌ Usuario o contraseña incorrectos");
             if (data.attemptsRemaining !== undefined) {
-              setError(prev => prev + ` (${data.attemptsRemaining} intentos restantes)`);
+              setError(
+                (prev) =>
+                  prev + ` (${data.attemptsRemaining} intentos restantes)`
+              );
             }
             break;
           default:
-            setError(data.message || 'Error de autenticación');
+            setError(data.message || "Error de autenticación");
         }
       }
     } catch (err) {
-      console.error('💥 Error en login:', err);
-      setError('🔌 Error de conexión. Verifica que el servidor esté disponible.');
+      console.error("💥 Error en login:", err);
+      setError(
+        "🔌 Error de conexión. Verifica que el servidor esté disponible."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const quickFill = (user) => {
-    if (user === 'admin') {
-      setCredentials({ username: 'admin', password: 'Chilldigital2025' });
+    if (user === "admin") {
+      setCredentials({ username: "admin", password: "Chilldigital2025" });
     } else {
-      setCredentials({ username: 'doctor', password: 'TuPassword123' });
+      setCredentials({ username: "doctor", password: "TuPassword123" });
     }
   };
 
@@ -116,8 +124,12 @@ export default function LoginView({ onSuccess }) {
         <div className="hidden lg:flex flex-col justify-between p-10 brand-bg text-white">
           <div />
           <div>
-            <div className="text-3xl font-bold leading-tight">¡Bienvenida a tu consultorio digital! 👋🏻</div>
-            <p className="mt-3 text-white/80">Accedé a tus pacientes y turnos desde un solo lugar.</p>
+            <div className="text-3xl font-bold leading-tight">
+              ¡Bienvenida a tu consultorio digital! 👋🏻
+            </div>
+            <p className="mt-3 text-white/80">
+              Accedé a tus pacientes y turnos desde un solo lugar.
+            </p>
           </div>
           <div className="flex items-center gap-2 opacity-90">
             <Shield size={16} />
@@ -129,7 +141,9 @@ export default function LoginView({ onSuccess }) {
         <div className="flex items-center justify-center p-8">
           <div className="w-full max-w-md bg-white border rounded-2xl shadow-sm p-8">
             <h1 className="text-3xl font-semibold text-gray-900">Login</h1>
-            <p className="text-gray-500 mt-2">Accede a tu sistema odontológico.</p>
+            <p className="text-gray-500 mt-2">
+              Accede a tu sistema odontológico.
+            </p>
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
               {/* Mensajes de estado */}
@@ -139,7 +153,7 @@ export default function LoginView({ onSuccess }) {
                   <span>{error}</span>
                 </div>
               )}
-              
+
               {success && (
                 <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
                   <CheckCircle size={16} />
@@ -149,7 +163,10 @@ export default function LoginView({ onSuccess }) {
 
               {/* Campo Usuario */}
               <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="username"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Usuario
                 </label>
                 <input
@@ -163,13 +180,13 @@ export default function LoginView({ onSuccess }) {
                   disabled={loading}
                   autoComplete="username"
                 />
-                
+
                 {/* Botones de prueba rápida - SOLO EN DESARROLLO */}
-                {process.env.NODE_ENV === 'development' && (
+                {process.env.NODE_ENV === "development" && (
                   <div className="mt-2 flex gap-2">
                     <button
                       type="button"
-                      onClick={() => quickFill('admin')}
+                      onClick={() => quickFill("admin")}
                       disabled={loading}
                       className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-600"
                     >
@@ -177,7 +194,7 @@ export default function LoginView({ onSuccess }) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => quickFill('doctor')}
+                      onClick={() => quickFill("doctor")}
                       disabled={loading}
                       className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-600"
                     >
@@ -189,7 +206,10 @@ export default function LoginView({ onSuccess }) {
 
               {/* Campo Contraseña */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Contraseña
                 </label>
                 <div className="relative">
@@ -218,7 +238,11 @@ export default function LoginView({ onSuccess }) {
               {/* Botón Login */}
               <button
                 type="submit"
-                disabled={loading || !credentials.username.trim() || !credentials.password.trim()}
+                disabled={
+                  loading ||
+                  !credentials.username.trim() ||
+                  !credentials.password.trim()
+                }
                 className="w-full py-3 px-4 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
               >
                 {loading ? (
@@ -227,7 +251,7 @@ export default function LoginView({ onSuccess }) {
                     Ingresando...
                   </>
                 ) : (
-                  '🔐 Ingresar'
+                  "🔐 Ingresar"
                 )}
               </button>
             </form>

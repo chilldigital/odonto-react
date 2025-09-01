@@ -12,13 +12,9 @@ export const getAuthToken = () => {
 
 // 👤 Obtener datos del usuario
 export const getUser = () => {
-  try {
-    const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
-  } catch (e) {
-    console.error('Error obteniendo usuario:', e);
-    return null;
-  }
+  try { return JSON.parse(localStorage.getItem('user')); 
+    
+  } catch { return null; }
 };
 
 // 🕐 Decodificar payload del token JWT

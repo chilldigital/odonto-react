@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { X, Home, Calendar, Users, LogOut, Settings, Lock, User } from 'lucide-react';
-import { getUser } from '../utils/auth';
+import { getUser, logout } from '../utils/auth';
 import ChangePasswordModal from './ChangePasswordModal';
 
 export default function Sidebar({ sidebarOpen, setSidebarOpen, onLogout }) {
@@ -12,6 +12,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, onLogout }) {
 
   const handleLogout = () => {
     if (onLogout) onLogout();
+    else logout();
   };
 
   const handleChangePassword = () => {
