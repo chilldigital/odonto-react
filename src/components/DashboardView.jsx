@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
-import { Eye, ArrowRight, Calendar, RefreshCcw } from 'lucide-react';
+import { Eye, ArrowRight, Calendar, RefreshCcw, User } from 'lucide-react';
 import { URL_CALENDAR_EVENTS } from '../config/n8n';
 import StatsCard from './StatsCard';
 import SearchInput from './SearchInput';
@@ -225,19 +225,6 @@ export default function DashboardView({
           <div className="p-4 lg:p-6 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
             <div className="flex items-center gap-3">
               <h2 className="text-lg font-semibold text-gray-800">Próximos Turnos</h2>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <a
-                href="https://turnos.chilldigital.tech"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
-              >
-                <Calendar size={14} />
-                Nuevo
-              </a>
-              
               <Link
                 to="/turnos"
                 className="inline-flex items-center text-teal-600 hover:text-teal-700 text-sm font-medium"
@@ -245,6 +232,18 @@ export default function DashboardView({
                 Ver todos
                 <ArrowRight size={16} className="ml-1" />
               </Link>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <a
+                href="https://turnos.chilldigital.tech"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                <Calendar size={14} />
+                Nuevo
+              </a>
             </div>
           </div>
           
@@ -345,9 +344,10 @@ export default function DashboardView({
               <button 
                 onClick={onAddPatient} 
                 disabled={patientsLoading}
-                className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-1 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Nuevo             
+                <User size={14} />
+                Nuevo
               </button>
             </div>
           </div>

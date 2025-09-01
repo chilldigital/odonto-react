@@ -1,6 +1,6 @@
 // src/components/TurnosView.jsx
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { Calendar, RefreshCcw, ExternalLink, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { Calendar, RefreshCcw, ExternalLink, Plus } from 'lucide-react';
 import { URL_CALENDAR_EVENTS } from '../config/n8n';
 
 // Helpers de fechas (sin librerías)
@@ -112,46 +112,7 @@ export default function TurnosView() {
 
   const grouped = useMemo(() => groupByDate(events), [events]);
 
-  // navegación de fechas
-  const goToday = () => setBaseDate(new Date());
-  
-  const goPrev = () => {
-    setBaseDate(prev => {
-      if (mode === 'dia') {
-        return addDays(prev, -1);
-      } else if (mode === 'semana') {
-        return addDays(prev, -7);
-      } else { // agenda
-        return addDays(prev, -7);
-      }
-    });
-  };
-  
-  const goNext = () => {
-    setBaseDate(prev => {
-      if (mode === 'dia') {
-        return addDays(prev, 1);
-      } else if (mode === 'semana') {
-        return addDays(prev, 7);
-      } else { // agenda
-        return addDays(prev, 7);
-      }
-    });
-  };
-
   const calLink = process.env.REACT_APP_CAL_LINK || 'https://cal.com/chill-digital/consulta-general';
-
-  // Función para formatear el título del rango de fechas
-  const formatDateRange = () => {
-    if (mode === 'dia') {
-      return fmtDay.format(baseDate);
-    } else if (mode === 'semana') {
-      return `${fmtDay.format(range.from).split(',')[0]} — ${fmtDay.format(range.to).split(',')[0]}`;
-    } else {
-      // agenda
-      return `Agenda desde ${fmtDay.format(baseDate).split(',')[0]}`;
-    }
-  };
 
   return (
     <div className="p-4 lg:p-8 bg-gray-50 min-h-screen">
@@ -184,43 +145,7 @@ export default function TurnosView() {
               ))}
             </div>
 
-            {/* Navegación fecha */}
-            <div className="flex items-center gap-1 ml-1">
-              <button 
-                onClick={goPrev} 
-                className="p-2 rounded-lg border hover:bg-gray-50 transition-colors"
-                title="Anterior"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <div className="px-3 py-2 text-sm text-gray-700 bg-gray-50 rounded-lg border min-w-[200px] text-center">
-                {formatDateRange()}
-              </div>
-              <button 
-                onClick={goNext} 
-                className="p-2 rounded-lg border hover:bg-gray-50 transition-colors"
-                title="Siguiente"
-              >
-                <ChevronRight size={16} />
-              </button>
-              <button 
-                onClick={goToday} 
-                className="ml-1 px-3 py-2 rounded-lg border text-sm hover:bg-gray-50 transition-colors"
-              >
-                Hoy
-              </button>
-            </div>
-
-            {/* Acciones */}
-            <button
-              onClick={fetchEvents}
-              disabled={loading}
-              className="ml-2 inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm hover:bg-gray-50 disabled:opacity-50 transition-colors"
-              title="Sincronizar"
-            >
-              <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} /> 
-              Sincronizar
-            </button>
+            {/* Nuevo turno */}
             <a
               href={calLink}
               target="_blank" rel="noreferrer"
