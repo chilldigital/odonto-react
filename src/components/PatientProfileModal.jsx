@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ModalShell from './ModalShell';
-import { User, Hash, Phone, Building2, FileText, AlertTriangle, Activity, Stethoscope, Trash2, Edit3, MessageCircle } from 'lucide-react';
+import { User, Hash, Phone, Building2, FileText, AlertTriangle, Activity, Stethoscope } from 'lucide-react';
 import { initials } from '../utils/helpers';
 
 export default function PatientProfileModal({ open, patient, onClose, onEdit, onDelete, onMessage }) {
@@ -85,16 +85,36 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
   }
 
   const InfoRow = ({ icon: Icon, label, value, className = '' }) => (
-    <div className="flex items-start py-2">
+    <div className="flex items-start py-2 gap-3">
       <div className="flex items-center min-w-[120px] text-sm font-medium text-gray-600">
         <Icon size={16} className="mr-2 text-gray-500" />
         {label}:
       </div>
-      <div className={`text-sm text-gray-900 break-words ${className}`}>
+      <div className={`text-sm text-gray-900 break-words min-w-0 ${className}`}>
         {value}
       </div>
     </div>
   );
+
+  // Render link label for Historia Clínica (avoid long URL overflow)
+  const historiaClinicaValue = (() => {
+    const url = historiaClinicaUrl;
+    const invalid = !url || url === '-' || url === 'Sin archivo';
+    if (invalid) return 'Sin archivo';
+    // If it doesn't look like a URL, just show the text as fallback
+    const looksLikeUrl = /^https?:\/\//i.test(url);
+    if (!looksLikeUrl) return url;
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-emerald-600 underline hover:text-emerald-700"
+      >
+        Enlace
+      </a>
+    );
+  })();
 
   if (showConfirm) {
     return (
@@ -132,36 +152,33 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
       title="Perfil del Paciente"
       onClose={onClose}
       footer={(
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           {onMessage && (
             <button
               type="button"
-              className="flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm"
+              className="hidden sm:flex items-center justify-center h-12 px-6 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 text-base"
               onClick={() => onMessage && onMessage(patient)}
             >
-              <MessageCircle size={16} className="mr-2" />
               Mensaje
             </button>
           )}
           <button
             type="button"
-            className="flex items-center justify-center px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm"
+            className="flex-1 h-12 px-6 rounded-xl bg-red-600 text-white hover:bg-red-700 text-base font-semibold"
             onClick={handleDeleteClick}
           >
-            <Trash2 size={16} className="mr-2" />
             Eliminar
           </button>
           <button
-            className="flex items-center justify-center px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-sm font-semibold"
+            className="flex-1 h-12 px-6 rounded-xl bg-teal-600 text-white hover:bg-emerald-700 text-base font-semibold"
             onClick={() => onEdit && onEdit(patient)}
           >
-            <Edit3 size={16} className="mr-2" />
             Editar
           </button>
         </div>
       )}
     >
-      <div className="py-6">
+      <div className="py-6 overflow-x-hidden">
         
         {/* Header con avatar y nombre */}
         <div className="flex flex-col items-center mb-6 text-center">
@@ -236,7 +253,7 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
           <InfoRow 
             icon={FileText} 
             label="Historia Clínica" 
-            value={historiaClinicaUrl} 
+            value={historiaClinicaValue} 
           />
 
           {/* 9. Estado */}

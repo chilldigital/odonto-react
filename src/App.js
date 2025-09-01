@@ -259,7 +259,11 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
 export default function App() {
   const [authed, setAuthed] = useState(!!localStorage.getItem('token'));
   const [justLoggedIn, setJustLoggedIn] = useState(false);
-  const handleLoginSuccess = useCallback(() => { setAuthed(true); setJustLoggedIn(true); }, []);
+  const handleLoginSuccess = useCallback((token = 'session') => {
+    try { localStorage.setItem('token', token); } catch (e) {}
+    setAuthed(true);
+    setJustLoggedIn(true);
+  }, []);
   const handleLogout = useCallback(() => { try { localStorage.removeItem('token'); } catch (e) {} setAuthed(false); }, []);
   if (!authed) return <LoginView onSuccess={handleLoginSuccess} />;
 
