@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Auth N8N - Sistema Dental</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .container { background: #f9f9f9; padding: 30px; border-radius: 8px; }
+        input, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+        button { background: #0C9488; color: white; cursor: pointer; font-size: 16px; }
+        button:hover { background: #097C73; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .result { background: #f0f8ff; padding: 15px; border-radius: 5px; margin-top: 20px; border-left: 4px solid #0C9488; }
+        .error { background: #ffebee; border-left: 4px solid #f44336; }
+        .success { background: #e8f5e8; border-left: 4px solid #4caf50; }
+        .code { background: #1e1e1e; color: #ffffff; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; overflow-x: auto; white-space: pre; }
+        .step { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .step h3 { margin-top: 0; color: #0C9488; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test de Autenticación N8N</h1>
+        <p>Usa este script para probar tu flujo de autenticación antes de integrarlo al frontend.</p>
+        
+        <!-- PASO 1: Configuración -->
+        <div class="step">
+            <h3>📝 Paso 1: Configuración</h3>
+            <label for="n8nUrl">URL de tu N8N:</label>
+            <input type="url" id="n8nUrl" value="https://n8n-automation.chilldigital.tech" placeholder="https://tu-n8n.dominio.com" />
+        </div>
+
+        <!-- PASO 2: Test de Credenciales -->
+        <div class="step">
+            <h3>🔐 Paso 2: Test de Login</h3>
+            <label for="username">Usuario:</label>
+            <input type="text" id="username" value="admin" placeholder="doctor o admin" />
+            
+            <label for="password">Contraseña:</label>
+            <input type="password" id="password" value="Chilldigital2025" placeholder="Tu contraseña" />
+            
+            <button onclick="testAuth()" id="testBtn">🧪 Probar Autenticación</button>
+        </div>
+
+        <!-- PASO 3: Resultados -->
+        <div class="step">
+            <h3>📊 Paso 3: Resultados</h3>
+            <div id="results"></div>
+        </div>
+
+        <!-- PASO 4: Hashes -->
+        <div class="step">
+            <h3>🔑 Paso 4: Generar Hashes (Para N8N)</h3>
+            <label for="passwordToHash">Contraseña a hashear:</label>
+            <input type="password" id="passwordToHash" placeholder="Ingresa la contraseña" />
+            <button onclick="generateHash()">🔐 Generar Hash SHA-256</button>
+            <div id="hashResult"></div>
+        </div>
+    </div>
+
+    <script>
+        async function testAuth() {
+            const n8nUrl = document.getElementById('n8nUrl').value.trim();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const resultsDiv = document.getElementById('results');
+            const testBtn = document.getElementById('testBtn');
+
+            if (!n8nUrl || !username || !password) {
+                resultsDiv.innerHTML = '<div class="result error">❌ Por favor completa todos los campos</div>';
+                return;
+            }
+
+            testBtn.disabled = true;
+            testBtn.textContent = '🔄 Probando...';
+            
+            resultsDiv.innerHTML = '<div class="result">🔄 Enviando request a N8N...</div>';
+
+            const startTime = Date.now();
+
+            try {
+                console.log('📤 Enviando request:', { username, url: `${n8nUrl}/webhook/auth-login` });
+
+                const response = await fetch(`${n8nUrl}/webhook/auth-login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+
+                const responseTime = Date.now() - startTime;
+                const data = await response.json();
+
+                console.log('📥 Response:', data);
+
+                let resultHtml = `
+                    <div class="result ${data.success ? 'success' : 'error'}">
+                        <h4>${data.success ? '✅ LOGIN EXITOSO' : '❌ LOGIN FALLIDO'}</h4>
+                        <p><strong>Status HTTP:</strong> ${response.status}</p>
+                        <p><strong>Tiempo de respuesta:</strong> ${responseTime}ms</p>
+                        <p><strong>Mensaje:</strong> ${data.message}</p>
+                        
+                        ${data.success ? `
+                            <p><strong>Usuario:</strong> ${data.user?.name} (${data.user?.username})</p>
+                            <p><strong>Rol:</strong> ${data.user?.role}</p>
+                            <p><strong>Token generado:</strong> ✅ Sí (${data.token ? data.token.length : 0} caracteres)</p>
+                            <p><strong>Expira en:</strong> ${data.expiresIn} segundos (${Math.floor(data.expiresIn / 3600)} horas)</p>
+                        ` : `
+                            <p><strong>Código de error:</strong> ${data.code}</p>
+                            ${data.attemptsRemaining !== undefined ? `<p><strong>Intentos restantes:</strong> ${data.attemptsRemaining}</p>` : ''}
+                            ${data.retryAfter ? `<p><strong>Reintentar en:</strong> ${Math.floor(data.retryAfter / 60)} minutos</p>` : ''}
+                        `}
+                    </div>
+                    
+                    <div class="result">
+                        <h4>🔍 Debug Info</h4>
+                        <div class="code">${JSON.stringify(data, null, 2)}</div>
+                    </div>
+                `;
+
+                resultsDiv.innerHTML = resultHtml;
+
+            } catch (error) {
+                console.error('💥 Error:', error);
+                
+                resultsDiv.innerHTML = `
+                    <div class="result error">
+                        <h4>💥 ERROR DE CONEXIÓN</h4>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p><strong>Posibles causas:</strong></p>
+                        <ul>
+                            <li>N8N no está corriendo</li>
+                            <li>URL incorrecta</li>
+                            <li>Flujo no activado en N8N</li>
+                            <li>CORS bloqueando la request</li>
+                            <li>Error en el código del flujo N8N</li>
+                        </ul>
+                        
+                        <h4>🔧 Cómo verificar:</h4>
+                        <ol>
+                            <li>Abre tu N8N y verifica que el flujo esté <strong>ACTIVADO</strong></li>
+                            <li>Verifica que la URL sea exactamente: <code>${n8nUrl}/webhook/auth-login</code></li>
+                            <li>Prueba hacer la request desde Postman o curl</li>
+                            <li>Revisa los logs del flujo en N8N</li>
+                        </ol>
+                    </div>
+                `;
+            } finally {
+                testBtn.disabled = false;
+                testBtn.textContent = '🧪 Probar Autenticación';
+            }
+        }
+
+        async function generateHash() {
+            const password = document.getElementById('passwordToHash').value;
+            const hashResultDiv = document.getElementById('hashResult');
+            
+            if (!password) {
+                hashResultDiv.innerHTML = '<div class="result error">❌ Ingresa una contraseña</div>';
+                return;
+            }
+            
+            if (password.length < 8) {
+                hashResultDiv.innerHTML = '<div class="result error">⚠️ Usa una contraseña de al menos 8 caracteres</div>';
+                return;
+            }
+            
+            try {
+                const encoder = new TextEncoder();
+                const data = encoder.encode(password);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                
+                hashResultDiv.innerHTML = `
+                    <div class="result success">
+                        <h4>🔐 Hash SHA-256 Generado</h4>
+                        <p><strong>Contraseña:</strong> ${password}</p>
+                        <p><strong>Hash:</strong></p>
+                        <div class="code">${hashHex}</div>
+                        <p><small>Copia este hash y úsalo en tu flujo N8N en VALID_USERS</small></p>
+                    </div>
+                `;
+            } catch (error) {
+                hashResultDiv.innerHTML = `<div class="result error">❌ Error generando hash: ${error.message}</div>`;
+            }
+        }
+
+        // Generar hash automáticamente cuando se cambie la contraseña de test
+        document.getElementById('password').addEventListener('input', function() {
+            document.getElementById('passwordToHash').value = this.value;
+        });
+
+        // Auto-fill hash field when password changes
+        document.getElementById('passwordToHash').value = document.getElementById('password').value;
+    </script>
+</body>
+</html>

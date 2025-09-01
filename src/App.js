@@ -1,6 +1,10 @@
+// src/App.js - CON AUTENTICACIÓN MEJORADA
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import './App.css';
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
+
+// Auth utilities
+import { isAuthenticated, saveAuth, clearAuth, checkTokenExpiry, getTokenInfo } from './utils/auth';
 
 // Utils
 function parseFechaToMs(raw) {
@@ -52,12 +56,41 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // 🔐 Verificar token periódicamente
+  useEffect(() => {
+    // Verificar token inmediatamente
+    if (!checkTokenExpiry()) {
+      console.log('🚨 Token inválido, redirigiendo a login...');
+      onLogout();
+      return;
+    }
+
+    // Verificar token cada 5 minutos
+    const tokenCheckInterval = setInterval(() => {
+      if (!checkTokenExpiry()) {
+        console.log('🚨 Token expirado, haciendo logout...');
+        onLogout();
+      }
+    }, 5 * 60 * 1000); // 5 minutos
+
+    return () => clearInterval(tokenCheckInterval);
+  }, [onLogout]);
+
+  // 🏠 Navegar a home después del login
   useEffect(() => {
     if (justLoggedIn) {
       navigate('/', { replace: true });
       if (onConsumedLogin) onConsumedLogin();
     }
   }, [justLoggedIn, navigate, onConsumedLogin]);
+
+  // 📊 Debug: Mostrar info del token en desarrollo
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      const tokenInfo = getTokenInfo();
+      console.log('🔍 Token Info:', tokenInfo);
+    }
+  }, []);
 
   const { patients, loading, error, addPatient, updatePatient, refreshPatients } = usePatients();
 
@@ -73,65 +106,87 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
 
   const normalizedPatients = useMemo(() => {
     const list = Array.isArray(patients) ? patients : [];
-    const keyOf = (p) =>
-      p?.id || p?.airtableId || p?._id || p?.recordId || p?.email ||
-      `${(p?.nombre ?? p?.name ?? '').trim()}-${(p?.telefono ?? '').trim()}`;
-
-    const map = new Map();
-    list.filter(Boolean).map((p) => {
-      const fields = p?.fields || {};
-      const fechaRaw =
-        p?.fechaCreacion ?? p?.fechaRegistro ?? p?.FechaRegistro ?? p?.['Fecha Registro'] ??
-        fields['Fecha Registro'] ?? fields.FechaRegistro ?? fields.fechaRegistro ?? fields.fechaCreacion ??
-        p?.fecha_registro ?? p?.created_at ?? fields.created_at ?? p?.createdAt ?? fields.createdAt ??
-        p?.createdTime ?? fields.createdTime ?? null;
-
-      const fallbackRaw = p?._raw?.createdTime || p?._createdTime || null;
-      const resolvedRaw = fechaRaw ?? fallbackRaw;
-
-      const ms = parseFechaToMs(resolvedRaw);
-      const createdMs = ms || (typeof p?._createdAt === 'number' ? p._createdAt : Date.now());
+    
+    // Filtrar pacientes eliminados localmente
+    const filtered = list.filter(p => {
+      const id = p?.id || p?.airtableId || p?.recordId || p?._id;
+      return id && !locallyDeleted.includes(id);
+    });
+    
+    // Normalizar estructura
+    return filtered.map(p => {
+      const getField = (obj, fieldNames, defaultValue = '') => {
+        for (const fieldName of fieldNames) {
+          const value = obj?.[fieldName] || obj?.fields?.[fieldName];
+          if (value != null && value !== '') return String(value);
+        }
+        return defaultValue;
+      };
 
       return {
-        ...p,
-        nombre: p?.nombre ?? p?.name ?? fields.nombre ?? fields.Name ?? '',
-        fechaRegistro: resolvedRaw ?? p?.fechaCreacion ?? fields.fechaCreacion ?? null,
-        _createdAt: createdMs,
+        id: p?.id || p?.airtableId || p?.recordId || p?._id || String(Math.random()),
+        airtableId: p?.airtableId || p?.id || p?.recordId || p?._id,
+        recordId: p?.recordId || p?.id || p?.airtableId || p?._id,
+        nombre: getField(p, ['nombre', 'name'], 'Sin nombre'),
+        dni: getField(p, ['dni', 'DNI', 'Dni']),
+        telefono: getField(p, ['telefono', 'phone', 'Telefono']),
+        obraSocial: getField(p, ['obraSocial', 'obra_social', 'ObraSocial', 'Obra Social']),
+        numeroAfiliado: getField(p, ['numeroAfiliado', 'Numero Afiliado', 'Número Afiliado', 'numero_afiliado']),
+        email: getField(p, ['email', 'Email', 'correo']),
+        direccion: getField(p, ['direccion', 'Direccion', 'address']),
+        fechaNacimiento: getField(p, ['fechaNacimiento', 'Fecha Nacimiento', 'birthDate']),
+        estado: getField(p, ['estado', 'Estado', 'status'], 'Activo'),
+        ultimaVisita: getField(p, ['ultimaVisita', 'Ultima Visita', 'lastVisit'], '-'),
+        proximoTurno: getField(p, ['proximoTurno', 'Proximo Turno', 'nextAppointment'], '-'),
+        alergia: getField(p, ['alergia', 'Alergia', 'allergies'], 'Ninguna'),
+        antecedentes: getField(p, ['antecedentes', 'Antecedentes', 'medicalHistory'], 'Ninguno'),
+        notas: getField(p, ['notas', 'Notas', 'notes']),
+        historiaClinicaUrl: getField(p, ['historiaClinicaUrl', 'historia_clinica', 'Historia Clinica']),
+        fechaCreacion: getField(p, ['fechaCreacion', 'Fecha Creacion', 'createdAt'], new Date().toISOString().slice(0, 10)),
+        _createdAt: parseFechaToMs(p?._createdAt || p?.createdTime || p?.fechaCreacion || Date.now())
       };
-    }).filter((p) => p.nombre && p.nombre.trim() !== '')
-      .forEach((p) => map.set(keyOf(p), p));
-
-    const removed = new Set(locallyDeleted);
-    return Array.from(map.values()).filter((item) => !removed.has(keyOf(item)));
+    }).sort((a, b) => b._createdAt - a._createdAt);
   }, [patients, locallyDeleted]);
 
-  const latestPatients = useMemo(() => {
-    return [...normalizedPatients].sort((a, b) => (b?._createdAt || 0) - (a?._createdAt || 0)).slice(0, 4);
-  }, [normalizedPatients]);
+  const latestPatients = useMemo(() => normalizedPatients.slice(0, 4), [normalizedPatients]);
 
-  const onViewPatient = useCallback((p) => { setSelectedPatient(p); setShowProfileModal(true); }, []);
-  const closeProfile = useCallback(() => setShowProfileModal(false), []);
-  const onEditFromProfile = useCallback((p) => { setShowProfileModal(false); setTimeout(() => { setSelectedPatient(p); setShowEditModal(true); }, 100); }, []);
+  // Modal handlers
+  const closeProfile = useCallback(() => {
+    setShowProfileModal(false);
+    setSelectedPatient(null);
+  }, []);
 
-  const onSavedPatient = useCallback(async (updated) => {
-    try {
-      await updatePatient(updated);
-      setSelectedPatient(updated);
-      await refreshPatients();
-    } catch (err) {
-      console.error('Error updating patient:', err);
-    }
-  }, [updatePatient, refreshPatients]);
+  const onViewPatient = useCallback((patient) => {
+    setSelectedPatient(patient);
+    setShowProfileModal(true);
+  }, []);
+
+  const onEditFromProfile = useCallback((patient) => {
+    setSelectedPatient(patient);
+    setShowProfileModal(false);
+    setShowEditModal(true);
+  }, []);
 
   const openAddPatient = useCallback(() => setShowAddModal(true), []);
   const closeAddPatient = useCallback(() => setShowAddModal(false), []);
 
+  const onSavedPatient = useCallback(async (updatedPatientData) => {
+    try {
+      await updatePatient(updatedPatientData);
+      setShowEditModal(false);
+      setSelectedPatient(null);
+    } catch (err) {
+      console.error('Error actualizando paciente:', err);
+      alert(`Error: ${err.message || 'No se pudo actualizar el paciente'}`);
+    }
+  }, [updatePatient]);
+
   const handleDeletePatient = useCallback(async (patientData) => {
     try {
-      const patient = typeof patientData === 'object' ? patientData :
+      const patient = typeof patientData === 'string' ? 
         normalizedPatients.find(p =>
           p?.id === patientData || p?.airtableId === patientData || p?.recordId === patientData
-        );
+        ) : patientData;
 
       if (!patient) throw new Error('No se pudo encontrar el paciente');
 
@@ -177,7 +232,6 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
     }
   }, [addPatient]);
 
-  // 🔹 Normalizo URL y abro modal
   const onOpenRecord = useCallback((p) => {
     const historiaUrl =
       p?.historiaUrl ||
@@ -257,19 +311,60 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
 }
 
 export default function App() {
-  const [authed, setAuthed] = useState(!!localStorage.getItem('token'));
+  const [authed, setAuthed] = useState(() => isAuthenticated());
   const [justLoggedIn, setJustLoggedIn] = useState(false);
-  const handleLoginSuccess = useCallback((token = 'session') => {
-    try { localStorage.setItem('token', token); } catch (e) {}
-    setAuthed(true);
-    setJustLoggedIn(true);
+
+  // 🔐 Manejar login exitoso
+  const handleLoginSuccess = useCallback((token, user) => {
+    console.log('✅ Login success, token:', token?.substring(0, 20) + '...');
+    
+    try {
+      saveAuth(token, user);
+      setAuthed(true);
+      setJustLoggedIn(true);
+      
+      console.log('💾 Auth data saved');
+    } catch (e) {
+      console.error('Error guardando auth:', e);
+      // Fallback: continuar sin persistencia
+      setAuthed(true);
+      setJustLoggedIn(true);
+    }
   }, []);
-  const handleLogout = useCallback(() => { try { localStorage.removeItem('token'); } catch (e) {} setAuthed(false); }, []);
-  if (!authed) return <LoginView onSuccess={handleLoginSuccess} />;
+
+  // 🚪 Manejar logout
+  const handleLogout = useCallback(() => {
+    console.log('🚪 Logging out...');
+    clearAuth();
+    setAuthed(false);
+    setJustLoggedIn(false);
+  }, []);
+
+  // 🔄 Consumir flag de recién logueado
+  const handleConsumedLogin = useCallback(() => {
+    setJustLoggedIn(false);
+  }, []);
+
+  // 🔍 Debug en desarrollo
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🏠 App State:', { authed, justLoggedIn });
+      console.log('🔍 Token Info:', getTokenInfo());
+    }
+  }, [authed, justLoggedIn]);
+
+  // 🚪 Mostrar login si no está autenticado
+  if (!authed) {
+    return <LoginView onSuccess={handleLoginSuccess} />;
+  }
 
   return (
     <Router>
-      <AuthedApp onLogout={handleLogout} justLoggedIn={justLoggedIn} onConsumedLogin={() => setJustLoggedIn(false)} />
+      <AuthedApp 
+        onLogout={handleLogout} 
+        justLoggedIn={justLoggedIn} 
+        onConsumedLogin={handleConsumedLogin} 
+      />
     </Router>
   );
 }
