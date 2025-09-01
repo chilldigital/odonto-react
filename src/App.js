@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import './App.css';
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 
@@ -47,10 +47,17 @@ const titleByPath = (pathname) => {
   return 'Dashboard';
 };
 
-function AuthedApp({ onLogout }) {
+function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (justLoggedIn) {
+      navigate('/', { replace: true });
+      if (onConsumedLogin) onConsumedLogin();
+    }
+  }, [justLoggedIn, navigate, onConsumedLogin]);
 
   const { patients, loading, error, addPatient, updatePatient, refreshPatients } = usePatients();
 
@@ -251,13 +258,14 @@ function AuthedApp({ onLogout }) {
 
 export default function App() {
   const [authed, setAuthed] = useState(!!localStorage.getItem('token'));
-  const handleLoginSuccess = useCallback(() => setAuthed(true), []);
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
+  const handleLoginSuccess = useCallback(() => { setAuthed(true); setJustLoggedIn(true); }, []);
   const handleLogout = useCallback(() => { try { localStorage.removeItem('token'); } catch (e) {} setAuthed(false); }, []);
   if (!authed) return <LoginView onSuccess={handleLoginSuccess} />;
 
   return (
     <Router>
-      <AuthedApp onLogout={handleLogout} />
+      <AuthedApp onLogout={handleLogout} justLoggedIn={justLoggedIn} onConsumedLogin={() => setJustLoggedIn(false)} />
     </Router>
   );
 }
