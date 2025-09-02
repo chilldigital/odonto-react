@@ -50,7 +50,7 @@ function groupByDate(events) {
   return Object.keys(by).sort().map(k => ({ date: new Date(k), items: by[k] }));
 }
 
-export default function TurnosView() {
+export default function TurnosView({ onOpenBooking }) { // Nueva prop agregada
   const [mode, setMode] = useState('agenda'); // agenda | semana | dia
   const [baseDate, setBaseDate] = useState(new Date());
   const [events, setEvents] = useState([]);
@@ -112,8 +112,6 @@ export default function TurnosView() {
 
   const grouped = useMemo(() => groupByDate(events), [events]);
 
-  const calLink = process.env.REACT_APP_CAL_LINK || 'https://cal.com/chill-digital/consulta-general';
-
   return (
     <div className="p-4 lg:p-8 bg-gray-50 min-h-screen">
       <div className="bg-white rounded-lg shadow-sm border">
@@ -145,14 +143,13 @@ export default function TurnosView() {
               ))}
             </div>
 
-            {/* Nuevo turno */}
-            <a
-              href={calLink}
-              target="_blank" rel="noreferrer"
+            {/* Nuevo turno - Cambiar el enlace externo por el botón del modal */}
+            <button
+              onClick={onOpenBooking}
               className="inline-flex items-center gap-2 bg-teal-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-teal-700 transition-colors"
             >
               <Plus size={16} /> Nuevo turno
-            </a>
+            </button>
           </div>
         </div>
 
@@ -180,13 +177,13 @@ export default function TurnosView() {
                 {mode === 'semana' && 'Intenta cambiar de semana o revisar la agenda general'}
                 {mode === 'agenda' && 'Intenta cambiar el período de la agenda'}
               </p>
-              <a
-                href={calLink}
-                target="_blank" rel="noreferrer"
+              {/* Cambiar enlace externo por botón del modal */}
+              <button
+                onClick={onOpenBooking}
                 className="inline-flex items-center gap-2 mt-3 text-teal-600 hover:text-teal-700 text-sm transition-colors"
               >
                 <Plus size={16} /> Programar nuevo turno
-              </a>
+              </button>
             </div>
           )}
 
@@ -218,7 +215,7 @@ export default function TurnosView() {
                         <div className="min-w-0 flex-1">
                           <div className="text-gray-900 text-sm font-medium">
                             {fmtTime.format(start)}
-                            {end && !isNaN(end.getTime()) ? ` – ${fmtTime.format(end)}` : ''} · {title}{who ? ` — ${who}` : ''}
+                            {end && !isNaN(end.getTime()) ? ` — ${fmtTime.format(end)}` : ''} · {title}{who ? ` — ${who}` : ''}
                           </div>
                           {small && (
                             <div className="text-xs text-gray-600 mt-0.5 break-words">{small}</div>

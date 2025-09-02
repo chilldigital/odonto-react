@@ -1,4 +1,4 @@
-// src/App.js - CON AUTENTICACIÓN MEJORADA
+// src/App.js - CON AUTENTICACIÓN MEJORADA + BOOKING MODAL
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import './App.css';
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
@@ -41,6 +41,7 @@ import PatientProfileModal from './components/PatientProfileModal';
 import EditPatientModal from './components/EditPatientModal';
 import AddPatientModal from './components/AddPatientModal';
 import ClinicalRecordModal from './components/ClinicalRecordModal';
+import BookingModal from './components/BookingModal';
 import LoginView from './components/LoginView';
 
 import { URL_DELETE_PATIENT } from './config/n8n';
@@ -56,11 +57,11 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // 🔐 Verificar token periódicamente
+  // Verificar token periódicamente
   useEffect(() => {
     // Verificar token inmediatamente
     if (!checkTokenExpiry()) {
-      console.log('🚨 Token inválido, redirigiendo a login...');
+      console.log('Token inválido, redirigiendo a login...');
       onLogout();
       return;
     }
@@ -68,7 +69,7 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
     // Verificar token cada 5 minutos
     const tokenCheckInterval = setInterval(() => {
       if (!checkTokenExpiry()) {
-        console.log('🚨 Token expirado, haciendo logout...');
+        console.log('Token expirado, haciendo logout...');
         onLogout();
       }
     }, 5 * 60 * 1000); // 5 minutos
@@ -76,7 +77,7 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
     return () => clearInterval(tokenCheckInterval);
   }, [onLogout]);
 
-  // 🏠 Navegar a home después del login
+  // Navegar a home después del login
   useEffect(() => {
     if (justLoggedIn) {
       navigate('/', { replace: true });
@@ -84,11 +85,11 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
     }
   }, [justLoggedIn, navigate, onConsumedLogin]);
 
-  // 📊 Debug: Mostrar info del token en desarrollo
+  // Debug: Mostrar info del token en desarrollo
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       const tokenInfo = getTokenInfo();
-      console.log('🔍 Token Info:', tokenInfo);
+      console.log('Token Info:', tokenInfo);
     }
   }, []);
 
@@ -102,6 +103,7 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showRecordModal, setShowRecordModal] = useState(false);
+  const [showBookingModal, setShowBookingModal] = useState(false); // Nuevo estado para BookingModal
   const [locallyDeleted, setLocallyDeleted] = useState([]);
 
   const normalizedPatients = useMemo(() => {
@@ -170,6 +172,18 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
   const openAddPatient = useCallback(() => setShowAddModal(true), []);
   const closeAddPatient = useCallback(() => setShowAddModal(false), []);
 
+  // Booking Modal handlers
+  const openBookingModal = useCallback(() => setShowBookingModal(true), []);
+  const closeBookingModal = useCallback(() => setShowBookingModal(false), []);
+  
+  const onBookingSuccess = useCallback(() => {
+    // Aquí puedes agregar lógica para actualizar la lista de turnos si es necesario
+    console.log('Turno creado exitosamente');
+    
+    // Opcional: Refrescar datos de turnos si tienes un hook para eso
+    // refreshTurnos();
+  }, []);
+
   const onSavedPatient = useCallback(async (updatedPatientData) => {
     try {
       await updatePatient(updatedPatientData);
@@ -226,7 +240,7 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
       const created = (Array.isArray(res) ? res[0]?.patient : res?.patient) || res || createdFallback;
       return created;
     } catch (err) {
-      console.error('❌ Error creating patient:', err);
+      console.error('Error creating patient:', err);
       alert(`Error: ${err.message || 'No se pudo crear el paciente'}`);
       throw err;
     }
@@ -274,6 +288,7 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
                   onAddPatient={openAddPatient}
                   onViewPatient={onViewPatient}
                   onOpenRecord={onOpenRecord}
+                  onOpenBooking={openBookingModal} // Nueva prop
                   patients={normalizedPatients}
                   latestPatients={latestPatients}
                   loading={loading}
@@ -281,7 +296,10 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
                 />
               )}
             />
-            <Route path="/turnos" element={<TurnosView />} />
+            <Route 
+              path="/turnos" 
+              element={<TurnosView onOpenBooking={openBookingModal} />} // Nueva prop
+            />
             <Route
               path="/pacientes"
               element={(
@@ -306,6 +324,13 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
       <EditPatientModal open={showEditModal} patient={selectedPatient} onClose={() => setShowEditModal(false)} onSaved={onSavedPatient} loading={loading} />
       <AddPatientModal open={showAddModal} onClose={closeAddPatient} onCreate={onCreatedPatient} loading={loading} />
       <ClinicalRecordModal open={showRecordModal} patient={selectedPatient} onClose={() => setShowRecordModal(false)} />
+      
+      {/* Nuevo BookingModal */}
+      <BookingModal 
+        open={showBookingModal} 
+        onClose={closeBookingModal} 
+        onSuccess={onBookingSuccess} 
+      />
     </div>
   );
 }
@@ -314,16 +339,16 @@ export default function App() {
   const [authed, setAuthed] = useState(() => isAuthenticated());
   const [justLoggedIn, setJustLoggedIn] = useState(false);
 
-  // 🔐 Manejar login exitoso
+  // Manejar login exitoso
   const handleLoginSuccess = useCallback((token, user) => {
-    console.log('✅ Login success, token:', token?.substring(0, 20) + '...');
+    console.log('Login success, token:', token?.substring(0, 20) + '...');
     
     try {
       saveAuth(token, user);
       setAuthed(true);
       setJustLoggedIn(true);
       
-      console.log('💾 Auth data saved');
+      console.log('Auth data saved');
     } catch (e) {
       console.error('Error guardando auth:', e);
       // Fallback: continuar sin persistencia
@@ -332,28 +357,28 @@ export default function App() {
     }
   }, []);
 
-  // 🚪 Manejar logout
+  // Manejar logout
   const handleLogout = useCallback(() => {
-    console.log('🚪 Logging out...');
+    console.log('Logging out...');
     clearAuth();
     setAuthed(false);
     setJustLoggedIn(false);
   }, []);
 
-  // 🔄 Consumir flag de recién logueado
+  // Consumir flag de recién logueado
   const handleConsumedLogin = useCallback(() => {
     setJustLoggedIn(false);
   }, []);
 
-  // 🔍 Debug en desarrollo
+  // Debug en desarrollo
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('🏠 App State:', { authed, justLoggedIn });
-      console.log('🔍 Token Info:', getTokenInfo());
+      console.log('App State:', { authed, justLoggedIn });
+      console.log('Token Info:', getTokenInfo());
     }
   }, [authed, justLoggedIn]);
 
-  // 🚪 Mostrar login si no está autenticado
+  // Mostrar login si no está autenticado
   if (!authed) {
     return <LoginView onSuccess={handleLoginSuccess} />;
   }

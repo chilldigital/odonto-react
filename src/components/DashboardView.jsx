@@ -99,7 +99,8 @@ export default function DashboardView({
   setDashboardSearchTerm, 
   onAddPatient, 
   onViewPatient, 
-  onOpenRecord, 
+  onOpenRecord,
+  onOpenBooking, // Nueva prop para abrir el modal de turnos
   patients = [],
   latestPatients = [],
   loading: patientsLoading = false 
@@ -235,15 +236,14 @@ export default function DashboardView({
             </div>
             
             <div className="flex items-center gap-2">
-              <a
-                href="https://turnos.chilldigital.tech"
-                target="_blank"
-                rel="noopener noreferrer"
+              {/* Cambiar el enlace externo por el botón del modal */}
+              <button
+                onClick={onOpenBooking}
                 className="inline-flex items-center gap-1 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               >
                 <Calendar size={14} />
                 Nuevo
-              </a>
+              </button>
             </div>
           </div>
           
@@ -265,13 +265,13 @@ export default function DashboardView({
               <div className="text-center py-6 text-gray-500">
                 <Calendar size={32} className="mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No hay turnos programados para los próximos días</p>
-                <Link
-                  to="/turnos"
+                <button
+                  onClick={onOpenBooking}
                   className="inline-flex items-center gap-1 mt-2 text-teal-600 hover:text-teal-700 text-sm"
                 >
                   <Calendar size={14} />
-                  Ir al calendario
-                </Link>
+                  Agendar turno
+                </button>
               </div>
             )}
             
