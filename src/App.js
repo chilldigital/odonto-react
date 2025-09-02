@@ -250,7 +250,7 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onLogout={onLogout} />
 
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
-        <Header title={headerTitle} setSidebarOpen={setSidebarOpen} />
+        <Header title={headerTitle} setSidebarOpen={setSidebarOpen} onLogout={onLogout} />
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 mx-4 mt-4 rounded">
