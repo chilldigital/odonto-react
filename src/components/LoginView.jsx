@@ -230,6 +230,16 @@ export default function LoginView({ onSuccess }) {
                   '🔐 Ingresar'
                 )}
               </button>
+
+              <div className="text-center mt-4">
+                <button
+                  type="button"
+                  className="text-sm text-gray-400 hover:underline hover:text-teal-700 transition-colors"
+                  onClick={() => alert("Funcionalidad en desarrollo")}
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              </div>
             </form>
 
             {/* Footer info */}
