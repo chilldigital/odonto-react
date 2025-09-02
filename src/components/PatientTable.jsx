@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, XCircle } from 'lucide-react';
 
-export default React.memo(function PatientTable({ patients, onView, onOpenRecord, onDelete, showActions = true }) {
+export default React.memo(function PatientTable({ patients, onView, onOpenRecord, onDelete, showActions = false }) {
   const [pendingDelete, setPendingDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 

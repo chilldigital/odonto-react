@@ -55,6 +55,7 @@ export default function PacientesView({
             onView={onViewPatient}
             onOpenRecord={onOpenRecord}
             onDelete={onDeletePatient}
+            showActions={false}
           />
         )}
       </div>

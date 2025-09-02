@@ -1,111 +1,62 @@
-import React, { useMemo, useCallback, useState, useEffect } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Eye, ArrowRight, Calendar, RefreshCcw, User } from 'lucide-react';
-import { URL_CALENDAR_EVENTS } from '../config/n8n';
+import { useTurnos } from '../hooks/useTurnos';
 import StatsCard from './StatsCard';
 import SearchInput from './SearchInput';
 import PatientTable from './PatientTable';
 import { Link } from 'react-router-dom';
-
-// Hook para obtener próximos turnos
-function useUpcomingTurnos() {
-  const [turnos, setTurnos] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const fetchTurnos = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    
-    try {
-      // Obtener turnos de hoy + próximos 7 días
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const nextWeek = new Date(today);
-      nextWeek.setDate(nextWeek.getDate() + 7);
-      nextWeek.setHours(23, 59, 59, 999);
-
-      const fromISO = today.toISOString();
-      const toISO = nextWeek.toISOString();
-      const timeZone = 'America/Argentina/Buenos_Aires';
-      
-      const url = `${URL_CALENDAR_EVENTS}?from=${fromISO}&to=${toISO}&timeZone=${timeZone}`;
-      
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      const events = data.events || [];
-      
-      // Convertir a formato para el dashboard
-      const formattedTurnos = events
-        .filter(event => {
-          const startDate = new Date(event.start || event.startTime);
-          return !isNaN(startDate.getTime()) && startDate >= today;
-        })
-        .map(event => {
-          const start = new Date(event.start || event.startTime);
-          const end = event.end ? new Date(event.end) : null;
-          
-          const fmtDate = new Intl.DateTimeFormat('es-AR', { 
-            weekday: 'long', 
-            day: '2-digit', 
-            month: 'long' 
-          });
-          const fmtTime = new Intl.DateTimeFormat('es-AR', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          });
-          
-          return {
-            id: event.id,
-            fecha: fmtDate.format(start),
-            hora: `${fmtTime.format(start)} hs${end && !isNaN(end.getTime()) ? ` - ${fmtTime.format(end)} hs` : ''}`,
-            paciente: event.patientName || event.paciente || 'Sin nombre',
-            tipo: event.title || event.summary || 'Consulta',
-            startDate: start,
-            htmlLink: event.htmlLink
-          };
-        })
-        .sort((a, b) => a.startDate - b.startDate)
-        .slice(0, 3); // Mostrar solo los próximos 3
-      
-      setTurnos(formattedTurnos);
-      
-    } catch (err) {
-      console.error('Error fetching upcoming turnos:', err);
-      setError('No se pudieron cargar los turnos: ' + err.message);
-      setTurnos([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchTurnos();
-    
-    // Actualizar turnos automáticamente cada 5 minutos
-    const interval = setInterval(fetchTurnos, 5 * 60 * 1000);
-    
-    return () => clearInterval(interval);
-  }, [fetchTurnos]);
-
-  return { turnos, loading, error };
-}
 
 export default function DashboardView({ 
   dashboardSearchTerm, 
   setDashboardSearchTerm, 
   onAddPatient, 
   onViewPatient, 
-  onOpenRecord, 
+  onOpenRecord,
+  onOpenBooking, // Nueva prop para abrir el modal de turnos
   patients = [],
   latestPatients = [],
   loading: patientsLoading = false 
 }) {
-  // Hook para turnos
-  const { turnos, loading: turnosLoading, error: turnosError } = useUpcomingTurnos();
+  // Hook para turnos (próximos 7 días para el dashboard)
+  const { turnos: events, loading: turnosLoading, error: turnosError } = useTurnos();
+
+  // Procesar eventos para el dashboard
+  const turnos = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return events
+      .filter(event => {
+        const startDate = new Date(event.start || event.startTime);
+        return !isNaN(startDate.getTime()) && startDate >= today;
+      })
+      .map(event => {
+        const start = new Date(event.start || event.startTime);
+        const end = event.end ? new Date(event.end) : null;
+        
+        const fmtDate = new Intl.DateTimeFormat('es-AR', { 
+          weekday: 'long', 
+          day: '2-digit', 
+          month: 'long' 
+        });
+        const fmtTime = new Intl.DateTimeFormat('es-AR', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+        
+        return {
+          id: event.id,
+          fecha: fmtDate.format(start),
+          hora: `${fmtTime.format(start)} hs${end && !isNaN(end.getTime()) ? ` - ${fmtTime.format(end)} hs` : ''}`,
+          paciente: event.patientName || event.paciente || 'Sin nombre',
+          tipo: event.title || event.summary || 'Consulta',
+          startDate: start,
+          htmlLink: event.htmlLink
+        };
+      })
+      .sort((a, b) => a.startDate - b.startDate)
+      .slice(0, 3); // Mostrar solo los próximos 3
+  }, [events]);
 
   const filteredPacientes = useMemo(() => {
     const term = (dashboardSearchTerm || '').trim().toLowerCase();
@@ -235,15 +186,14 @@ export default function DashboardView({
             </div>
             
             <div className="flex items-center gap-2">
-              <a
-                href="https://turnos.chilldigital.tech"
-                target="_blank"
-                rel="noopener noreferrer"
+              {/* Cambiar el enlace externo por el botón del modal */}
+              <button
+                onClick={onOpenBooking}
                 className="inline-flex items-center gap-1 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               >
                 <Calendar size={14} />
                 Nuevo
-              </a>
+              </button>
             </div>
           </div>
           
@@ -265,13 +215,13 @@ export default function DashboardView({
               <div className="text-center py-6 text-gray-500">
                 <Calendar size={32} className="mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No hay turnos programados para los próximos días</p>
-                <Link
-                  to="/turnos"
+                <button
+                  onClick={onOpenBooking}
                   className="inline-flex items-center gap-1 mt-2 text-teal-600 hover:text-teal-700 text-sm"
                 >
                   <Calendar size={14} />
-                  Ir al calendario
-                </Link>
+                  Agendar turno
+                </button>
               </div>
             )}
             
@@ -361,7 +311,6 @@ export default function DashboardView({
               patients={filteredPacientes} 
               onView={onViewPatient} 
               onOpenRecord={onOpenRecord} 
-              showActions={false}
             />
           )}
         </div>
