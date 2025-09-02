@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, XCircle } from 'lucide-react';
 
-export default React.memo(function PatientTable({ patients, onView, onOpenRecord, onDelete }) {
+export default React.memo(function PatientTable({ patients, onView, onOpenRecord, onDelete, showActions = true }) {
   const [pendingDelete, setPendingDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -32,7 +32,9 @@ export default React.memo(function PatientTable({ patients, onView, onOpenRecord
             <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Obra Social</th>
             <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Historia Clínica</th>
             <th className="text-left p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Telefono</th>
-            <th className="text-right p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Acciones</th>
+            {showActions && (
+              <th className="text-right p-3 lg:p-4 text-sm font-medium text-gray-700 whitespace-nowrap">Acciones</th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -68,24 +70,26 @@ export default React.memo(function PatientTable({ patients, onView, onOpenRecord
 
               <td className="p-3 lg:p-4 text-sm text-gray-900 whitespace-nowrap">{paciente.telefono || '—'}</td>
 
-              <td className="p-3 lg:p-4">
-                <div className="flex justify-end items-center gap-2 opacity-60 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                  <button
-                    className="inline-flex items-center rounded-md p-1.5 text-gray-600 hover:text-green-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-300"
-                    onClick={() => onView && onView(paciente)}
-                    aria-label={`Ver perfil de ${paciente.nombre}`}
-                  >
-                    <Eye size={16} />
-                  </button>
-                  <button
-                    className="inline-flex items-center rounded-md p-1.5 text-gray-600 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-300"
-                    onClick={() => setPendingDelete(paciente)}
-                    aria-label={`Eliminar ${paciente.nombre}`}
-                  >
-                    <XCircle size={16} />
-                  </button>
-                </div>
-              </td>
+              {showActions && (
+                <td className="p-3 lg:p-4">
+                  <div className="flex justify-end items-center gap-2 opacity-60 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                    <button
+                      className="inline-flex items-center rounded-md p-1.5 text-gray-600 hover:text-green-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-300"
+                      onClick={() => onView && onView(paciente)}
+                      aria-label={`Ver perfil de ${paciente.nombre}`}
+                    >
+                      <Eye size={16} />
+                    </button>
+                    <button
+                      className="inline-flex items-center rounded-md p-1.5 text-gray-600 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-300"
+                      onClick={() => setPendingDelete(paciente)}
+                      aria-label={`Eliminar ${paciente.nombre}`}
+                    >
+                      <XCircle size={16} />
+                    </button>
+                  </div>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
