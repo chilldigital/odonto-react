@@ -112,7 +112,7 @@ export default function TurnosView() {
 
   const grouped = useMemo(() => groupByDate(events), [events]);
 
-  const calLink = process.env.REACT_APP_CAL_LINK || 'https://cal.com/chill-digital/consulta-general';
+  const turnosLink = 'https://turnos.chilldigital.tech/';
 
   return (
     <div className="p-4 lg:p-8 bg-gray-50 min-h-screen">
@@ -147,7 +147,7 @@ export default function TurnosView() {
 
             {/* Nuevo turno */}
             <a
-              href={calLink}
+              href={turnosLink}
               target="_blank" rel="noreferrer"
               className="inline-flex items-center gap-2 bg-teal-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-teal-700 transition-colors"
             >
@@ -181,7 +181,7 @@ export default function TurnosView() {
                 {mode === 'agenda' && 'Intenta cambiar el período de la agenda'}
               </p>
               <a
-                href={calLink}
+                href={turnosLink}
                 target="_blank" rel="noreferrer"
                 className="inline-flex items-center gap-2 mt-3 text-teal-600 hover:text-teal-700 text-sm transition-colors"
               >
