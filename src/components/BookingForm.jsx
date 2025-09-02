@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Calendar, Clock, User, CreditCard, Phone, AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { N8N_ENDPOINTS } from '../config/n8n';
 
 const APPOINTMENT_TYPES = [
   { id: 'consulta', name: 'Consulta', duration: 30 },
@@ -17,12 +18,6 @@ const APPOINTMENT_TYPES = [
 ];
 
 const WORK_DAYS = [1, 2, 3, 4]; // Lunes a Jueves
-
-const N8N_ENDPOINTS = {
-  CHECK_PATIENT: 'https://n8n-automation.chilldigital.tech/webhook/check-patient',
-  CREATE_APPOINTMENT: 'https://n8n-automation.chilldigital.tech/webhook/create-appointment',
-  GET_AVAILABILITY: 'https://n8n-automation.chilldigital.tech/webhook/get-availability'
-};
 
 export default function BookingForm({ onSuccess }) {
   // Form state

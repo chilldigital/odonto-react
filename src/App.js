@@ -30,6 +30,7 @@ function parseFechaToMs(raw) {
 
 // Hooks
 import { usePatients } from './hooks/usePatients';
+import { useTurnos } from './hooks/useTurnos';
 
 // Components
 import Sidebar from './components/Sidebar';
@@ -42,6 +43,8 @@ import EditPatientModal from './components/EditPatientModal';
 import AddPatientModal from './components/AddPatientModal';
 import ClinicalRecordModal from './components/ClinicalRecordModal';
 import BookingModal from './components/BookingModal';
+import TurnoDetailsModal from './components/TurnoDetailsModal';
+import EditTurnoModal from './components/EditTurnoModal';
 import LoginView from './components/LoginView';
 
 import { URL_DELETE_PATIENT } from './config/n8n';
@@ -94,16 +97,24 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
   }, []);
 
   const { patients, loading, error, addPatient, updatePatient, refreshPatients } = usePatients();
+  const { refreshTurnos } = useTurnos(); // Hook para turnos
 
   const [searchTerm, setSearchTerm] = useState('');
   const [dashboardSearchTerm, setDashboardSearchTerm] = useState('');
 
+  // Estados de modales de pacientes
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showRecordModal, setShowRecordModal] = useState(false);
-  const [showBookingModal, setShowBookingModal] = useState(false); // Nuevo estado para BookingModal
+  
+  // Estados de modales de turnos
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [showTurnoDetailsModal, setShowTurnoDetailsModal] = useState(false);
+  const [showEditTurnoModal, setShowEditTurnoModal] = useState(false);
+  const [selectedTurno, setSelectedTurno] = useState(null);
+  
   const [locallyDeleted, setLocallyDeleted] = useState([]);
 
   const normalizedPatients = useMemo(() => {
@@ -177,12 +188,47 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
   const closeBookingModal = useCallback(() => setShowBookingModal(false), []);
   
   const onBookingSuccess = useCallback(() => {
-    // Aquí puedes agregar lógica para actualizar la lista de turnos si es necesario
-    console.log('Turno creado exitosamente');
-    
-    // Opcional: Refrescar datos de turnos si tienes un hook para eso
-    // refreshTurnos();
+    // Refrescar turnos inmediatamente cuando se crea uno nuevo
+    console.log('Turno creado exitosamente - actualizando calendario');
+    refreshTurnos();
+  }, [refreshTurnos]);
+
+  // Turno modal handlers
+  const onViewTurno = useCallback((turno) => {
+    setSelectedTurno(turno);
+    setShowTurnoDetailsModal(true);
   }, []);
+
+  const onEditTurnoFromDetails = useCallback((turno) => {
+    setSelectedTurno(turno);
+    setShowTurnoDetailsModal(false);
+    setShowEditTurnoModal(true);
+  }, []);
+
+  const closeTurnoDetails = useCallback(() => {
+    setShowTurnoDetailsModal(false);
+    setSelectedTurno(null);
+  }, []);
+
+  const closeEditTurno = useCallback(() => {
+    setShowEditTurnoModal(false);
+    setSelectedTurno(null);
+  }, []);
+
+  const onTurnoSaved = useCallback((updatedTurno) => {
+    console.log('Turno actualizado:', updatedTurno);
+    refreshTurnos();
+    setShowEditTurnoModal(false);
+    setSelectedTurno(null);
+  }, [refreshTurnos]);
+
+  const onTurnoDeleted = useCallback((deletedTurno) => {
+    console.log('Turno cancelado:', deletedTurno);
+    refreshTurnos();
+    setShowEditTurnoModal(false);
+    setShowTurnoDetailsModal(false);
+    setSelectedTurno(null);
+  }, [refreshTurnos]);
 
   const onSavedPatient = useCallback(async (updatedPatientData) => {
     try {
