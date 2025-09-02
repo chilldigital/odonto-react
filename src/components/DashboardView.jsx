@@ -361,6 +361,7 @@ export default function DashboardView({
               patients={filteredPacientes} 
               onView={onViewPatient} 
               onOpenRecord={onOpenRecord} 
+              showActions={false}
             />
           )}
         </div>
