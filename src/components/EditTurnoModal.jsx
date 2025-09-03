@@ -1,29 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Calendar, Clock, User, CreditCard, Phone, AlertCircle, CheckCircle, Loader } from 'lucide-react';
-
-const APPOINTMENT_TYPES = [
-  { id: 'consulta', name: 'Consulta', duration: 30 },
-  { id: 'limpieza', name: 'Limpieza', duration: 45 },
-  { id: 'ensenanza', name: 'Enseñanza de técnica de cepillado y flúor en niños', duration: 30 },
-  { id: 'caries_chicos', name: 'Arreglos caries chicos', duration: 45 },
-  { id: 'caries_grandes', name: 'Arreglos caries grandes', duration: 60 },
-  { id: 'molde_blanqueamiento', name: 'Toma de molde para blanqueamiento ambulatorio', duration: 30 },
-  { id: 'molde_relajacion', name: 'Toma de molde para placa de relajación', duration: 30 },
-  { id: 'instalacion_placas', name: 'Instalación de placas de relajación', duration: 45 },
-  { id: 'carillas', name: 'Carillas anteriores', duration: 90 },
-  { id: 'contenciones', name: 'Contenciones', duration: 45 },
-  { id: 'incrustaciones', name: 'Incrustaciones', duration: 75 }
-];
-
-const WORK_DAYS = [1, 2, 3, 4]; // Lunes a Jueves
-
-// Endpoints que necesitarás crear en N8N
-const N8N_ENDPOINTS = {
-  CHECK_PATIENT: 'https://n8n-automation.chilldigital.tech/webhook/check-patient',
-  UPDATE_APPOINTMENT: 'https://n8n-automation.chilldigital.tech/webhook/update-appointment', // NUEVO
-  GET_AVAILABILITY: 'https://n8n-automation.chilldigital.tech/webhook/get-availability',
-  DELETE_APPOINTMENT: 'https://n8n-automation.chilldigital.tech/webhook/delete-appointment' // NUEVO
-};
+import { N8N_ENDPOINTS } from '../config/n8n';
+import { APPOINTMENT_TYPES, WORK_DAYS } from '../config/appointments';
+import { combineDateTimeToISO } from '../utils/appointments';
 
 export default function EditTurnoModal({ open, turno, onClose, onSaved, onDeleted }) {
   const [formData, setFormData] = useState({
@@ -52,24 +31,21 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
   // Inicializar formulario cuando se abre el modal
   useEffect(() => {
     if (open && turno) {
-      // Extraer fecha y hora del turno
       const startDate = turno.start || turno.startTime;
       let fecha = '', hora = '';
-      
       if (startDate) {
-        const date = new Date(startDate);
-        if (!isNaN(date.getTime())) {
-          fecha = date.toISOString().split('T')[0];
-          hora = date.toTimeString().slice(0, 5);
+        const d = new Date(startDate);
+        if (!isNaN(d.getTime())) {
+          fecha = d.toISOString().split('T')[0];
+          hora = d.toTimeString().slice(0, 5);
         }
       }
 
-      // Determinar tipo de turno basado en el título
-      const tipoTurno = APPOINTMENT_TYPES.find(type => 
-        turno.title?.toLowerCase().includes(type.name.toLowerCase()) ||
-        turno.summary?.toLowerCase().includes(type.name.toLowerCase()) ||
-        turno.tipoTurnoNombre?.toLowerCase().includes(type.name.toLowerCase())
-      )?.id || '';
+      const tipoTurno = (APPOINTMENT_TYPES.find(type =>
+        (turno.title || '').toLowerCase().includes(type.name.toLowerCase()) ||
+        (turno.summary || '').toLowerCase().includes(type.name.toLowerCase()) ||
+        (turno.tipoTurnoNombre || '').toLowerCase().includes(type.name.toLowerCase())
+      ) || {}).id || '';
 
       setFormData({
         id: turno.id || '',
@@ -80,9 +56,9 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
         numeroAfiliado: turno.numeroAfiliado || '',
         alergias: turno.alergias || '',
         antecedentes: turno.antecedentes || '',
-        tipoTurno: tipoTurno,
-        fecha: fecha,
-        hora: hora,
+        tipoTurno,
+        fecha,
+        hora,
         notas: turno.description || turno.notas || ''
       });
 
@@ -91,25 +67,18 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
     }
   }, [open, turno]);
 
-  // Check patient by DNI
+  // Consultar paciente por DNI
   const checkPatient = async (dni) => {
-    if (dni.length < 8) {
+    if (!dni || dni.length < 8) {
       setPatientFound(false);
       return;
     }
-    
     setCheckingPatient(true);
     setError('');
-    
     try {
       const response = await fetch(`${N8N_ENDPOINTS.CHECK_PATIENT}?dni=${dni}`);
-      
-      if (!response.ok) {
-        throw new Error('Error al consultar paciente');
-      }
-      
+      if (!response.ok) throw new Error('Error al consultar paciente');
       const data = await response.json();
-      
       if (data.found && data.patient) {
         setFormData(prev => ({
           ...prev,
@@ -118,7 +87,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
           obraSocial: data.patient.obraSocial || data.patient.insurance || prev.obraSocial,
           numeroAfiliado: data.patient.numeroAfiliado || data.patient.affiliateNumber || prev.numeroAfiliado,
           alergias: data.patient.alergias || data.patient.allergies || prev.alergias || 'Ninguna',
-          antecedentes: data.patient.antecedentes || data.patient.background || prev.antecedentes || 'Ninguno'
+          antecedentes: data.patient.antecedentes || data.patient.background || prev.antecedentes || 'Ninguno',
         }));
         setPatientFound(true);
       } else {
@@ -133,18 +102,15 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
     }
   };
 
-  // Get available slots for selected date and appointment type
+  // Obtener horarios disponibles
   const getAvailableSlots = async (fecha, tipoTurno) => {
     if (!fecha || !tipoTurno) return;
-    
     setLoadingAvailability(true);
     try {
       const appointmentType = APPOINTMENT_TYPES.find(t => t.id === tipoTurno);
-      const response = await fetch(
-        `${N8N_ENDPOINTS.GET_AVAILABILITY}?fecha=${fecha}&duration=${appointmentType.duration}&excludeId=${formData.id}`
-      );
+      const response = await fetch(`${N8N_ENDPOINTS.GET_AVAILABILITY}?fecha=${fecha}&duration=${appointmentType?.duration || 30}&excludeId=${formData.id}`);
       const data = await response.json();
-      setAvailableSlots([...data.availableSlots || [], formData.hora].filter(Boolean));
+      setAvailableSlots([...(data.availableSlots || []), formData.hora].filter(Boolean));
     } catch (err) {
       console.error('Error getting availability:', err);
       setAvailableSlots([formData.hora].filter(Boolean));
@@ -153,42 +119,31 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
     }
   };
 
-  // Generate available dates (next 2 weeks, only work days)
+  // Fechas disponibles (próximas 2 semanas; incluir seleccionada)
   const availableDates = useMemo(() => {
     const dates = [];
     const today = new Date();
-    
-    for (let i = 0; i <= 14; i++) { // Incluir hoy
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      
-      if (WORK_DAYS.includes(date.getDay()) || date.toISOString().split('T')[0] === formData.fecha) {
+    for (let i = 0; i <= 14; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const isWorkDay = WORK_DAYS.includes(d.getDay());
+      const value = d.toISOString().split('T')[0];
+      if (isWorkDay || value === formData.fecha) {
         dates.push({
-          value: date.toISOString().split('T')[0],
-          label: date.toLocaleDateString('es-AR', { 
-            weekday: 'long', 
-            day: '2-digit', 
-            month: 'long' 
-          })
+          value,
+          label: d.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'long' }),
         });
       }
     }
-    
     return dates;
   }, [formData.fecha]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
-    if (field === 'dni') {
-      checkPatient(value);
-    }
-    
+    if (field === 'dni') checkPatient(value);
     if (field === 'fecha' || field === 'tipoTurno') {
-      const newFormData = { ...formData, [field]: value };
-      if (newFormData.fecha && newFormData.tipoTurno) {
-        getAvailableSlots(newFormData.fecha, newFormData.tipoTurno);
-      }
+      const newData = { ...formData, [field]: value };
+      if (newData.fecha && newData.tipoTurno) getAvailableSlots(newData.fecha, newData.tipoTurno);
     }
   };
 
@@ -196,23 +151,14 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
     e.preventDefault();
     setLoading(true);
     setError('');
-
     try {
       const appointmentType = APPOINTMENT_TYPES.find(t => t.id === formData.tipoTurno);
-      
-      // Combinar fecha y hora en formato ISO completo
-      const [hours, minutes] = formData.hora.split(':');
-      const appointmentDateTime = new Date(formData.fecha);
-      appointmentDateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-      const appointmentISO = appointmentDateTime.toISOString();
-      
+      const appointmentISO = combineDateTimeToISO(formData.fecha, formData.hora, 'America/Argentina/Buenos_Aires');
       const response = await fetch(N8N_ENDPOINTS.UPDATE_APPOINTMENT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          // ID del turno a actualizar
           id: formData.id,
-          // Datos del paciente
           dni: formData.dni,
           nombre: formData.nombre,
           telefono: formData.telefono,
@@ -220,30 +166,22 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
           numeroAfiliado: formData.numeroAfiliado,
           alergias: formData.alergias || 'Ninguna',
           antecedentes: formData.antecedentes || 'Ninguno',
-          // Datos del turno
           tipoTurno: formData.tipoTurno,
-          tipoTurnoNombre: appointmentType.name,
-          duracion: appointmentType.duration,
+          tipoTurnoNombre: appointmentType?.name || 'Consulta',
+          duracion: appointmentType?.duration || 30,
           fechaHora: appointmentISO,
           timezone: 'America/Argentina/Buenos_Aires',
           notas: formData.notas,
-          // Metadatos
           isNewPatient: !patientFound,
-          updatedAt: new Date().toISOString()
-        })
+          updatedAt: new Date().toISOString(),
+        }),
       });
-
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Error al actualizar el turno');
       }
-
-      const result = await response.json();
-      
-      if (onSaved) {
-        onSaved(result.appointment || formData);
-      }
-      
+      const result = await response.json().catch(() => ({}));
+      if (onSaved) onSaved(result.appointment || formData);
       onClose();
     } catch (err) {
       setError(err.message || 'Error al actualizar el turno. Intenta nuevamente.');
@@ -254,13 +192,9 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('¿Estás seguro de que deseas cancelar este turno? Esta acción no se puede deshacer.')) {
-      return;
-    }
-
+    if (!window.confirm('¿Estás seguro de que deseas cancelar este turno? Esta acción no se puede deshacer.')) return;
     setDeleting(true);
     setError('');
-
     try {
       const response = await fetch(N8N_ENDPOINTS.DELETE_APPOINTMENT, {
         method: 'POST',
@@ -268,19 +202,14 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
         body: JSON.stringify({
           id: formData.id,
           reason: 'Cancelado por el odontólogo',
-          canceledAt: new Date().toISOString()
-        })
+          canceledAt: new Date().toISOString(),
+        }),
       });
-
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Error al cancelar el turno');
       }
-
-      if (onDeleted) {
-        onDeleted(turno);
-      }
-      
+      if (onDeleted) onDeleted(turno);
       onClose();
     } catch (err) {
       setError(err.message || 'Error al cancelar el turno. Intenta nuevamente.');
@@ -291,295 +220,247 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
   };
 
   const isFormValid = () => {
-    return formData.dni && formData.nombre && formData.telefono && 
-           formData.tipoTurno && formData.fecha && formData.hora;
+    return (
+      formData.dni && formData.nombre && formData.telefono &&
+      formData.tipoTurno && formData.fecha && formData.hora
+    );
   };
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
-      {/* Overlay */}
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-        onClick={onClose}
-      ></div>
-      
-      {/* Modal */}
+      <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={onClose} />
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="relative bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
           {/* Header */}
           <div className="sticky top-0 z-[1] bg-teal-600 p-6 text-white relative">
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors"
-            >
+            <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors">
               <X size={20} />
             </button>
-            
             <div className="pr-12">
               <h2 className="text-2xl font-bold mb-2">Editar Turno</h2>
-              <p className="text-white-100">Modifica los detalles del turno existente</p>
+              <p className="text-white-100">Modificá los detalles del turno existente</p>
             </div>
           </div>
 
-          {/* Body scrollable */}
+          {/* Body */}
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
-          {/* Form */}
-          <form onSubmit={handleSave} className="p-6 space-y-6">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
-                <AlertCircle size={20} />
-                {error}
-              </div>
-            )}
-
-            {/* DNI Field */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <CreditCard className="inline w-4 h-4 mr-1" />
-                DNI
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={formData.dni}
-                  onChange={(e) => handleInputChange('dni', e.target.value)}
-                  placeholder="12.345.678"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  required
-                />
-                {checkingPatient && (
-                  <Loader className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 animate-spin" />
-                )}
-              </div>
-              {patientFound && (
-                <p className="text-green-600 text-sm mt-1 flex items-center gap-1">
-                  <CheckCircle size={16} />
-                  Paciente encontrado - datos actualizados automáticamente
-                </p>
+            <form onSubmit={handleSave} className="p-6 space-y-6">
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+                  <AlertCircle size={20} />
+                  {error}
+                </div>
               )}
-            </div>
 
-            {/* Personal Info Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* DNI */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <User className="inline w-4 h-4 mr-1" />
-                  Nombre Completo
+                  <CreditCard className="inline w-4 h-4 mr-1" /> DNI
                 </label>
-                <input
-                  type="text"
-                  value={formData.nombre}
-                  onChange={(e) => handleInputChange('nombre', e.target.value)}
-                  placeholder="Juan Pérez"
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.dni}
+                    onChange={(e) => handleInputChange('dni', e.target.value)}
+                    placeholder="12.345.678"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    required
+                  />
+                  {checkingPatient && (
+                    <Loader className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 animate-spin" />
+                  )}
+                </div>
+                {patientFound && (
+                  <p className="text-green-600 text-sm mt-1 flex items-center gap-1">
+                    <CheckCircle size={16} /> Paciente encontrado - datos actualizados automáticamente
+                  </p>
+                )}
+              </div>
+
+              {/* Datos personales */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <User className="inline w-4 h-4 mr-1" /> Nombre Completo
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.nombre}
+                    onChange={(e) => handleInputChange('nombre', e.target.value)}
+                    placeholder="Juan Pérez"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Phone className="inline w-4 h-4 mr-1" /> Teléfono
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.telefono}
+                    onChange={(e) => handleInputChange('telefono', e.target.value)}
+                    placeholder="+54 381 123 4567"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Obra Social */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Obra Social</label>
+                  <input
+                    type="text"
+                    value={formData.obraSocial}
+                    onChange={(e) => handleInputChange('obraSocial', e.target.value)}
+                    placeholder="OSDE, Swiss Medical, etc."
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Número de Afiliado</label>
+                  <input
+                    type="text"
+                    value={formData.numeroAfiliado}
+                    onChange={(e) => handleInputChange('numeroAfiliado', e.target.value)}
+                    placeholder="123456789"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Información médica */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Alergias</label>
+                  <input
+                    type="text"
+                    value={formData.alergias}
+                    onChange={(e) => handleInputChange('alergias', e.target.value)}
+                    placeholder="Ninguna, Penicilina, etc."
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Antecedentes</label>
+                  <input
+                    type="text"
+                    value={formData.antecedentes}
+                    onChange={(e) => handleInputChange('antecedentes', e.target.value)}
+                    placeholder="Diabetes, Hipertensión, etc."
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Tipo de turno */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Clock className="inline w-4 h-4 mr-1" /> Tipo de Turno
+                </label>
+                <select
+                  value={formData.tipoTurno}
+                  onChange={(e) => handleInputChange('tipoTurno', e.target.value)}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                   required
-                />
+                >
+                  <option value="">Selecciona el tipo de consulta</option>
+                  {APPOINTMENT_TYPES.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.name} ({type.duration} min)
+                    </option>
+                  ))}
+                </select>
               </div>
-              
+
+              {/* Fecha */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Phone className="inline w-4 h-4 mr-1" />
-                  Teléfono
+                  <Calendar className="inline w-4 h-4 mr-1" /> Fecha
                 </label>
-                <input
-                  type="tel"
-                  value={formData.telefono}
-                  onChange={(e) => handleInputChange('telefono', e.target.value)}
-                  placeholder="+54 381 123 4567"
+                <select
+                  value={formData.fecha}
+                  onChange={(e) => handleInputChange('fecha', e.target.value)}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                   required
-                />
+                >
+                  <option value="">Selecciona una fecha</option>
+                  {availableDates.map((d) => (
+                    <option key={d.value} value={d.value}>{d.label}</option>
+                  ))}
+                </select>
               </div>
-            </div>
 
-            {/* Insurance Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Horario */}
+              {formData.fecha && formData.tipoTurno && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Clock className="inline w-4 h-4 mr-1" /> Horario
+                  </label>
+                  {loadingAvailability ? (
+                    <div className="flex items-center gap-2 p-3 text-gray-600">
+                      <Loader className="w-5 h-5 animate-spin" /> Cargando horarios disponibles...
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {availableSlots.map((slot) => (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => handleInputChange('hora', slot)}
+                          className={`p-3 text-sm rounded-lg border transition-colors ${
+                            formData.hora === slot
+                              ? 'bg-amber-600 text-white border-amber-600'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-amber-500'
+                          }`}
+                        >
+                          {slot} hs
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Notas */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Obra Social
-                </label>
-                <input
-                  type="text"
-                  value={formData.obraSocial}
-                  onChange={(e) => handleInputChange('obraSocial', e.target.value)}
-                  placeholder="OSDE, Swiss Medical, etc."
+                <label className="block text-sm font-medium text-gray-700 mb-2">Notas adicionales</label>
+                <textarea
+                  value={formData.notas}
+                  onChange={(e) => handleInputChange('notas', e.target.value)}
+                  rows={3}
+                  placeholder="Información adicional sobre el turno..."
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 />
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  N° de Afiliado
-                </label>
-                <input
-                  type="text"
-                  value={formData.numeroAfiliado}
-                  onChange={(e) => handleInputChange('numeroAfiliado', e.target.value)}
-                  placeholder="123456789"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                />
+
+              {/* Botones */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleting || loading}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                >
+                  Cancelar Turno
+                </button>
+                <button
+                  type="submit"
+                  disabled={!isFormValid() || loading || deleting}
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-3 px-6 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loading ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
               </div>
-            </div>
-
-            {/* Medical Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Alergias
-                </label>
-                <input
-                  type="text"
-                  value={formData.alergias}
-                  onChange={(e) => handleInputChange('alergias', e.target.value)}
-                  placeholder="Ninguna, Penicilina, etc."
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Antecedentes
-                </label>
-                <input
-                  type="text"
-                  value={formData.antecedentes}
-                  onChange={(e) => handleInputChange('antecedentes', e.target.value)}
-                  placeholder="Diabetes, Hipertensión, etc."
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            {/* Appointment Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Clock className="inline w-4 h-4 mr-1" />
-                Tipo de Turno
-              </label>
-              <select
-                value={formData.tipoTurno}
-                onChange={(e) => handleInputChange('tipoTurno', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                required
-              >
-                <option value="">Selecciona el tipo de consulta</option>
-                {APPOINTMENT_TYPES.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.name} ({type.duration} min)
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Date Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Calendar className="inline w-4 h-4 mr-1" />
-                Fecha
-              </label>
-              <select
-                value={formData.fecha}
-                onChange={(e) => handleInputChange('fecha', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                required
-              >
-                <option value="">Selecciona una fecha</option>
-                {availableDates.map((date) => (
-                  <option key={date.value} value={date.value}>
-                    {date.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Time Selection */}
-            {formData.fecha && formData.tipoTurno && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Clock className="inline w-4 h-4 mr-1" />
-                  Horario
-                </label>
-                {loadingAvailability ? (
-                  <div className="flex items-center gap-2 p-3 text-gray-600">
-                    <Loader className="w-5 h-5 animate-spin" />
-                    Cargando horarios disponibles...
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {availableSlots.map((slot) => (
-                      <button
-                        key={slot}
-                        type="button"
-                        onClick={() => handleInputChange('hora', slot)}
-                        className={`p-3 text-sm rounded-lg border transition-colors ${
-                          formData.hora === slot
-                            ? 'bg-amber-600 text-white border-amber-600'
-                            : 'bg-white text-gray-700 border-gray-300 hover:border-amber-500'
-                        }`}
-                      >
-                        {slot} hs
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Notes */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Notas adicionales
-              </label>
-              <textarea
-                value={formData.notas}
-                onChange={(e) => handleInputChange('notas', e.target.value)}
-                rows={3}
-                placeholder="Información adicional sobre el turno..."
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={deleting || loading}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              >
-                {deleting ? (
-                  <>
-                    <Loader className="w-5 h-5 animate-spin" />
-                    Cancelando...
-                  </>
-                ) : (
-                  'Cancelar Turno'
-                )}
-              </button>
-                            <button
-                type="submit"
-                disabled={!isFormValid() || loading}
-                className="flex-1 bg-teal-600 text-white py-3 px-6 rounded-lg font-medium hover:from-amber-700 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <Loader className="w-5 h-5 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-5 h-5" />
-                    Guardar Cambios
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
+            </form>
           </div>
         </div>
       </div>
     </div>
   );
 }
+
