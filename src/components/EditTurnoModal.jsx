@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { X, Calendar, Clock, User, CreditCard, Phone, AlertCircle, CheckCircle, Loader } from 'lucide-react';
 import { N8N_ENDPOINTS } from '../config/n8n';
 import { APPOINTMENT_TYPES, WORK_DAYS } from '../config/appointments';
-import { combineDateTimeToISO } from '../utils/appointments';
+import { combineDateTimeToISO, to24h } from '../utils/appointments';
 
 export default function EditTurnoModal({ open, turno, onClose, onSaved, onDeleted }) {
   const [formData, setFormData] = useState({
@@ -141,8 +141,8 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
       const response = await fetch(`${N8N_ENDPOINTS.GET_AVAILABILITY}?fecha=${fecha}&duration=${appointmentType?.duration || 30}&excludeId=${formData.id}`);
       const data = await response.json();
       const raw = Array.isArray(data?.availableSlots) ? data.availableSlots : [];
-      // Quitar duplicados y ordenar
-      const unique = Array.from(new Set(raw)).sort();
+      // Normalizar a 24h, quitar duplicados y ordenar
+      const unique = Array.from(new Set(raw.map(to24h))).sort();
       setAvailableSlots(unique);
     } catch (err) {
       console.error('Error getting availability:', err);

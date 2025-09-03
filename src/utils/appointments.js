@@ -6,7 +6,9 @@ export function combineDateTimeToISO(fecha, hora, tz = 'America/Argentina/Buenos
   try {
     // Parsear fecha como LOCAL (evitar new Date('YYYY-MM-DD') que asume UTC)
     const [yStr, mStr, dStr] = String(fecha).split('-');
-    const [hhStr = '00', mmStr = '00'] = String(hora).split(':');
+    // Normalizar hora a 24h por si viene con AM/PM
+    const normalizedTime = to24h(String(hora));
+    const [hhStr = '00', mmStr = '00'] = String(normalizedTime).split(':');
     const y = parseInt(yStr, 10);
     const m = parseInt(mStr, 10) - 1; // 0-based
     const d = parseInt(dStr, 10);
@@ -42,6 +44,7 @@ export function formatTime(dateLike, opts) {
   const formatOptions = {
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
     ...(opts || {}),
   };
   return d.toLocaleTimeString('es-AR', formatOptions);
@@ -70,4 +73,42 @@ export function normalizeTurno(raw) {
     antecedentes: turno.antecedentes || '',
   };
   return normalized;
+}
+
+// Convierte una hora (posible 12h con AM/PM) a formato 24h HH:MM
+export function to24h(timeStr) {
+  if (timeStr == null) return '';
+  const s = String(timeStr).trim();
+  if (!s) return '';
+
+  const m = s.match(/^\s*(\d{1,2})(?::(\d{1,2}))?\s*(AM|PM|am|pm)?\s*$/);
+  if (m) {
+    let h = parseInt(m[1], 10);
+    let min = m[2] != null ? parseInt(m[2], 10) : 0;
+    const mer = m[3] ? m[3].toLowerCase() : '';
+    if (Number.isNaN(h) || Number.isNaN(min)) return s;
+    if (mer === 'pm' && h < 12) h += 12;
+    if (mer === 'am' && h === 12) h = 0;
+    const hh = String(Math.max(0, Math.min(23, h))).padStart(2, '0');
+    const mm = String(Math.max(0, Math.min(59, min))).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+
+  // Intento simple HH:MM
+  const m2 = s.match(/^(\d{1,2}):(\d{1,2})$/);
+  if (m2) {
+    const h = String(Math.max(0, Math.min(23, parseInt(m2[1], 10)))).padStart(2, '0');
+    const mm = String(Math.max(0, Math.min(59, parseInt(m2[2], 10)))).padStart(2, '0');
+    return `${h}:${mm}`;
+  }
+
+  // Solo hora (ej: "9") => 09:00
+  const m3 = s.match(/^(\d{1,2})$/);
+  if (m3) {
+    const h = String(Math.max(0, Math.min(23, parseInt(m3[1], 10)))).padStart(2, '0');
+    return `${h}:00`;
+  }
+
+  // Si no se puede parsear, devolver original
+  return s;
 }

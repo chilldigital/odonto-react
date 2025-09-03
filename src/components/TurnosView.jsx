@@ -4,7 +4,7 @@ import { Calendar, RefreshCcw, Plus, Eye } from 'lucide-react';
 import { useTurnos } from '../hooks/useTurnos';
 
 const fmtDay = new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: '2-digit', month: 'long' });
-const fmtTime = new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit' });
+const fmtTime = new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
 
 function groupByDate(events) {
   const by = {};
