@@ -13,6 +13,7 @@ export default function DashboardView({
   onViewPatient, 
   onOpenRecord,
   onOpenBooking, // Nueva prop para abrir el modal de turnos
+  onViewTurno,
   patients = [],
   latestPatients = [],
   loading: patientsLoading = false 
@@ -33,25 +34,36 @@ export default function DashboardView({
       .map(event => {
         const start = new Date(event.start || event.startTime);
         const end = event.end ? new Date(event.end) : null;
-        
-        const fmtDate = new Intl.DateTimeFormat('es-AR', { 
-          weekday: 'long', 
-          day: '2-digit', 
-          month: 'long' 
+
+        const fmtDate = new Intl.DateTimeFormat('es-AR', {
+          weekday: 'long',
+          day: '2-digit',
+          month: 'long'
         });
-        const fmtTime = new Intl.DateTimeFormat('es-AR', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
+        const fmtTime = new Intl.DateTimeFormat('es-AR', {
+          hour: '2-digit',
+          minute: '2-digit'
         });
-        
+
+        const rawSummary = event.summary || event.title || '';
+        const pacienteFromEvent = event.patientName || event.paciente || '';
+        const [summaryTipo, summaryPaciente] = rawSummary.includes(' - ')
+          ? rawSummary.split(' - ')
+          : [rawSummary, ''];
+        const tipo = event.tipoTurnoNombre || summaryTipo || event.title || 'Consulta';
+        const paciente = pacienteFromEvent || summaryPaciente || 'Sin nombre';
+        const titulo = rawSummary || `${tipo}${paciente ? ` - ${paciente}` : ''}`;
+        const descripcion = event.description || event.location || '';
+
         return {
           id: event.id,
           fecha: fmtDate.format(start),
           hora: `${fmtTime.format(start)} hs${end && !isNaN(end.getTime()) ? ` - ${fmtTime.format(end)} hs` : ''}`,
-          paciente: event.patientName || event.paciente || 'Sin nombre',
-          tipo: event.title || event.summary || 'Consulta',
+          titulo,
+          descripcion,
           startDate: start,
-          htmlLink: event.htmlLink
+          htmlLink: event.htmlLink,
+          raw: event
         };
       })
       .sort((a, b) => a.startDate - b.startDate)
@@ -237,29 +249,20 @@ export default function DashboardView({
                       </div>
                     </div>
                     <div className="flex-1 sm:ml-4">
-                      <p className="font-medium text-gray-900">{turno.paciente}</p>
-                      <p className="text-sm text-gray-500">{turno.tipo}</p>
+                      <p className="font-medium text-gray-900">{turno.titulo}</p>
+                      <p className="text-sm text-gray-500">{turno.detalle}</p>
+                      {turno.descripcion && (
+                        <p className="text-xs text-gray-500 mt-0.5 truncate">{turno.descripcion}</p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
-                      {turno.htmlLink && turno.htmlLink !== '#' && (
-                        <a
-                          href={turno.htmlLink}
-                          target="_blank" 
-                          rel="noreferrer"
-                          className="text-gray-400 hover:text-gray-600"
-                          title="Abrir en Google Calendar"
-                        >
-                          <Eye size={16} />
-                        </a>
-                      )}
-                      {(!turno.htmlLink || turno.htmlLink === '#') && (
-                        <button 
-                          className="text-gray-400 hover:text-gray-600"
-                          onClick={() => console.log('Ver turno:', turno)}
-                        >
-                          <Eye size={16} />
-                        </button>
-                      )}
+                      <button 
+                        className="text-gray-400 hover:text-gray-600"
+                        onClick={() => onViewTurno && onViewTurno(turno.raw)}
+                        title="Ver detalles del turno"
+                      >
+                        <Eye size={16} />
+                      </button>
                     </div>
                   </div>
                 ))}

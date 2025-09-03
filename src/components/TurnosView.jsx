@@ -1,6 +1,6 @@
 // src/components/TurnosView.jsx
 import React, { useState, useMemo } from 'react';
-import { Calendar, RefreshCcw, ExternalLink, Plus } from 'lucide-react';
+import { Calendar, RefreshCcw, Plus, Eye } from 'lucide-react';
 import { useTurnos } from '../hooks/useTurnos';
 
 const fmtDay = new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: '2-digit', month: 'long' });
@@ -47,7 +47,7 @@ const getDefaultDates = () => {
   };
 };
 
-export default function TurnosView({ onOpenBooking }) {
+export default function TurnosView({ onOpenBooking, onViewTurno }) {
   // Fechas por defecto (2 semanas desde el lunes de esta semana)
   const defaultDates = useMemo(() => getDefaultDates(), []);
   
@@ -264,18 +264,14 @@ export default function TurnosView({ onOpenBooking }) {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-                          {ev.htmlLink && ev.htmlLink !== '#' && (
-                            <a
-                              href={ev.htmlLink}
-                              target="_blank" 
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                              title="Abrir en Google Calendar"
-                            >
-                              <ExternalLink size={16} />
-                              <span className="hidden sm:inline">Ver</span>
-                            </a>
-                          )}
+                          <button
+                            onClick={() => onViewTurno && onViewTurno(ev)}
+                            className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                            title="Ver detalles del turno"
+                          >
+                            <Eye size={16} />
+                            <span className="hidden sm:inline">Ver</span>
+                          </button>
                         </div>
                       </div>
                     </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar, Clock, User, Phone, CreditCard, MapPin, FileText, Edit, Trash2, ExternalLink } from 'lucide-react';
+import { X, Calendar, Clock, User, Phone, CreditCard, MapPin, FileText, Edit, Trash2 } from 'lucide-react';
 
 export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDelete }) {
   if (!open || !turno) return null;
@@ -217,18 +217,6 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
                 <Edit size={16} />
                 Editar Turno
               </button>
-              
-              {turno.htmlLink && turno.htmlLink !== '#' && (
-                <a
-                  href={turno.htmlLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-                >
-                  <ExternalLink size={16} />
-                  Ver en Calendar
-                </a>
-              )}
               
               <button
                 onClick={() => onDelete && onDelete(turno)}
