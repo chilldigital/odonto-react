@@ -1,7 +1,7 @@
 // src/App.js - CON AUTENTICACIÓN MEJORADA + BOOKING MODAL
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import './App.css';
-import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, useLocation, useNavigate } from 'react-router-dom';
 
 // Auth utilities
 import { isAuthenticated, saveAuth, clearAuth, checkTokenExpiry, getTokenInfo } from './utils/auth';
@@ -35,19 +35,12 @@ import { useTurnos } from './hooks/useTurnos';
 // Components
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import DashboardView from './components/DashboardView';
-import PacientesView from './components/PacientesView';
-import TurnosView from './components/TurnosView';
-import PatientProfileModal from './components/PatientProfileModal';
-import EditPatientModal from './components/EditPatientModal';
-import AddPatientModal from './components/AddPatientModal';
-import ClinicalRecordModal from './components/ClinicalRecordModal';
-import BookingModal from './components/BookingModal';
-import TurnoDetailsModal from './components/TurnoDetailsModal';
-import EditTurnoModal from './components/EditTurnoModal';
+import ModalsRoot from './components/ModalsRoot';
+import AppRoutes from './router/AppRoutes';
+import { ModalsProvider } from './hooks/useModals';
 import LoginView from './components/LoginView';
 
-import { URL_DELETE_PATIENT, N8N_ENDPOINTS } from './config/n8n';
+import { URL_DELETE_PATIENT } from './config/n8n';
 
 const titleByPath = (pathname) => {
   if (pathname.startsWith('/pacientes')) return 'Pacientes';
@@ -97,35 +90,11 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
   }, []);
 
   const { patients, loading, error, addPatient, updatePatient, refreshPatients } = usePatients();
-  const { refreshTurnos } = useTurnos(); // Hook para turnos
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [dashboardSearchTerm, setDashboardSearchTerm] = useState('');
-
-  // Estados de modales de pacientes
-  const [selectedPatient, setSelectedPatient] = useState(null);
-  const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showRecordModal, setShowRecordModal] = useState(false);
-  
-  // Estados de modales de turnos
-  const [showBookingModal, setShowBookingModal] = useState(false);
-  const [showTurnoDetailsModal, setShowTurnoDetailsModal] = useState(false);
-  const [showEditTurnoModal, setShowEditTurnoModal] = useState(false);
-  const [selectedTurno, setSelectedTurno] = useState(null);
-  
-  const [locallyDeleted, setLocallyDeleted] = useState([]);
+  const { refreshTurnos } = useTurnos();
 
   const normalizedPatients = useMemo(() => {
     const list = Array.isArray(patients) ? patients : [];
-    
-    // Filtrar pacientes eliminados localmente
-    const filtered = list.filter(p => {
-      const id = p?.id || p?.airtableId || p?.recordId || p?._id;
-      return id && !locallyDeleted.includes(id);
-    });
-    
+    const filtered = list; // ya no filtramos por eliminados locales aquí
     // Normalizar estructura
     return filtered.map(p => {
       const getField = (obj, fieldNames, defaultValue = '') => {
@@ -159,119 +128,11 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
         _createdAt: parseFechaToMs(p?._createdAt || p?.createdTime || p?.fechaCreacion || Date.now())
       };
     }).sort((a, b) => b._createdAt - a._createdAt);
-  }, [patients, locallyDeleted]);
+  }, [patients]);
 
   const latestPatients = useMemo(() => normalizedPatients.slice(0, 4), [normalizedPatients]);
 
-  // Modal handlers
-  const closeProfile = useCallback(() => {
-    setShowProfileModal(false);
-    setSelectedPatient(null);
-  }, []);
-
-  const onViewPatient = useCallback((patient) => {
-    setSelectedPatient(patient);
-    setShowProfileModal(true);
-  }, []);
-
-  const onEditFromProfile = useCallback((patient) => {
-    setSelectedPatient(patient);
-    setShowProfileModal(false);
-    setShowEditModal(true);
-  }, []);
-
-  const openAddPatient = useCallback(() => setShowAddModal(true), []);
-  const closeAddPatient = useCallback(() => setShowAddModal(false), []);
-
-  // Booking Modal handlers
-  const openBookingModal = useCallback(() => setShowBookingModal(true), []);
-  const closeBookingModal = useCallback(() => setShowBookingModal(false), []);
-  
-  const onBookingSuccess = useCallback(() => {
-    // Refrescar turnos inmediatamente cuando se crea uno nuevo
-    console.log('Turno creado exitosamente - actualizando calendario');
-    refreshTurnos();
-  }, [refreshTurnos]);
-
-  // Turno modal handlers
-  const onViewTurno = useCallback((turno) => {
-    setSelectedTurno(turno);
-    setShowTurnoDetailsModal(true);
-  }, []);
-
-  const onEditTurnoFromDetails = useCallback((turno) => {
-    setSelectedTurno(turno);
-    setShowTurnoDetailsModal(false);
-    setShowEditTurnoModal(true);
-  }, []);
-
-  const onDeleteTurnoFromDetails = useCallback(async (turno) => {
-    if (!turno || !turno.id) {
-      alert('No se pudo identificar el turno a cancelar');
-      return;
-    }
-    if (!window.confirm('¿Estás seguro de cancelar este turno?')) return;
-    try {
-      const response = await fetch(N8N_ENDPOINTS.DELETE_APPOINTMENT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: turno.id,
-          reason: 'Cancelado desde Dashboard',
-          canceledAt: new Date().toISOString()
-        })
-      });
-      if (!response.ok) {
-        let message = '';
-        try {
-          const data = await response.json();
-          message = data?.message || '';
-        } catch {}
-        throw new Error(message || 'Error al cancelar el turno');
-      }
-      onTurnoDeleted(turno);
-    } catch (err) {
-      console.error('Error cancelando turno:', err);
-      alert(err.message || 'No se pudo cancelar el turno.');
-    }
-  }, [onTurnoDeleted]);
-
-  const closeTurnoDetails = useCallback(() => {
-    setShowTurnoDetailsModal(false);
-    setSelectedTurno(null);
-  }, []);
-
-  const closeEditTurno = useCallback(() => {
-    setShowEditTurnoModal(false);
-    setSelectedTurno(null);
-  }, []);
-
-  const onTurnoSaved = useCallback((updatedTurno) => {
-    console.log('Turno actualizado:', updatedTurno);
-    refreshTurnos();
-    setShowEditTurnoModal(false);
-    setSelectedTurno(null);
-  }, [refreshTurnos]);
-
-  const onTurnoDeleted = useCallback((deletedTurno) => {
-    console.log('Turno cancelado:', deletedTurno);
-    refreshTurnos();
-    setShowEditTurnoModal(false);
-    setShowTurnoDetailsModal(false);
-    setSelectedTurno(null);
-  }, [refreshTurnos]);
-
-  const onSavedPatient = useCallback(async (updatedPatientData) => {
-    try {
-      await updatePatient(updatedPatientData);
-      setShowEditModal(false);
-      setSelectedPatient(null);
-    } catch (err) {
-      console.error('Error actualizando paciente:', err);
-      alert(`Error: ${err.message || 'No se pudo actualizar el paciente'}`);
-    }
-  }, [updatePatient]);
-
+  // Eliminar paciente (para usar en ProfileModal via ModalsRoot)
   const handleDeletePatient = useCallback(async (patientData) => {
     try {
       const patient = typeof patientData === 'string' ? 
@@ -285,8 +146,6 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
       const nombre = patient?.nombre || patient?.name || 'Paciente';
       if (!id) throw new Error('No se pudo identificar el paciente');
 
-      setLocallyDeleted(prev => [...prev, id]);
-
       const response = await fetch(URL_DELETE_PATIENT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -295,134 +154,45 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
       if (!response.ok) throw new Error(`Error del servidor: ${response.status}`);
 
       await refreshPatients();
-      setLocallyDeleted(prev => prev.filter(k => k !== id));
     } catch (err) {
       console.error('Error eliminando paciente:', err);
-      const id = typeof patientData === 'string' ? patientData : (patientData?.id || patientData?.airtableId);
-      if (id) setLocallyDeleted(prev => prev.filter(k => k !== id));
       throw err;
     }
   }, [refreshPatients, normalizedPatients]);
 
-  const onCreatedPatient = useCallback(async (patientData) => {
-    try {
-      const res = await addPatient(patientData);
-      setShowAddModal(false);
-      const createdFallback = {
-        ...patientData,
-        id: patientData?.id || patientData?.airtableId || patientData?.recordId || String(Date.now()),
-        fechaCreacion: patientData?.fechaCreacion || patientData?.fechaRegistro || new Date().toISOString().slice(0, 10),
-        _createdAt: typeof patientData?._createdAt === 'number' ? patientData._createdAt : Date.now(),
-      };
-      const created = (Array.isArray(res) ? res[0]?.patient : res?.patient) || res || createdFallback;
-      return created;
-    } catch (err) {
-      console.error('Error creating patient:', err);
-      alert(`Error: ${err.message || 'No se pudo crear el paciente'}`);
-      throw err;
-    }
-  }, [addPatient]);
-
-  const onOpenRecord = useCallback((p) => {
-    const historiaUrl =
-      p?.historiaUrl ||
-      p?.historiaClinica ||
-      p?.historiaClinicaUrl ||
-      p?.odontogramaUrl ||
-      '';
-    setSelectedPatient({ ...p, historiaUrl });
-    setShowRecordModal(true);
-  }, []);
-
   const headerTitle = titleByPath(location.pathname);
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onLogout={onLogout} />
+    <ModalsProvider addPatient={addPatient} updatePatient={updatePatient} refreshTurnos={refreshTurnos}>
+      <div className="flex h-screen bg-gray-100">
+        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onLogout={onLogout} />
 
-      <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
-        <Header title={headerTitle} setSidebarOpen={setSidebarOpen} onLogout={onLogout} />
+        <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
+          <Header title={headerTitle} setSidebarOpen={setSidebarOpen} onLogout={onLogout} />
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 mx-4 mt-4 rounded">
-            <div className="flex justify-between items-center">
-              <span>Error cargando pacientes: {error}</span>
-              <button onClick={refreshPatients} className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
-                Reintentar
-              </button>
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 mx-4 mt-4 rounded">
+              <div className="flex justify-between items-center">
+                <span>Error cargando pacientes: {error}</span>
+                <button onClick={refreshPatients} className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
+                  Reintentar
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <main className="flex-1 overflow-auto">
-          <Routes>
-            <Route
-              path="/"
-              element={(
-                <DashboardView
-                  dashboardSearchTerm={dashboardSearchTerm}
-                  setDashboardSearchTerm={setDashboardSearchTerm}
-                  onAddPatient={openAddPatient}
-                  onViewPatient={onViewPatient}
-                  onOpenRecord={onOpenRecord}
-                  onOpenBooking={openBookingModal} // Nueva prop
-                  patients={normalizedPatients}
-                  latestPatients={latestPatients}
-                  loading={loading}
-                  onGoToPatients={() => navigate('/pacientes')}
-                />
-              )}
+          <main className="flex-1 overflow-auto">
+            <AppRoutes
+              normalizedPatients={normalizedPatients}
+              loading={loading}
+              refreshPatients={refreshPatients}
             />
-            <Route 
-              path="/turnos" 
-              element={<TurnosView onOpenBooking={openBookingModal} onViewTurno={onViewTurno} />} // Nueva prop
-            />
-            <Route
-              path="/pacientes"
-              element={(
-                <PacientesView
-                  searchTerm={searchTerm}
-                  setSearchTerm={setSearchTerm}
-                  onAddPatient={openAddPatient}
-                  onViewPatient={onViewPatient}
-                  onOpenRecord={onOpenRecord}
-                  patients={normalizedPatients}
-                  loading={loading}
-                  onDeletePatient={handleDeletePatient}
-                />
-              )}
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
+          </main>
+        </div>
+
+        <ModalsRoot patientsLoading={loading} onDeletePatient={handleDeletePatient} />
       </div>
-
-      <PatientProfileModal open={showProfileModal} patient={selectedPatient} onClose={closeProfile} onEdit={onEditFromProfile} onDelete={handleDeletePatient} />
-      <EditPatientModal open={showEditModal} patient={selectedPatient} onClose={() => setShowEditModal(false)} onSaved={onSavedPatient} loading={loading} />
-      <AddPatientModal open={showAddModal} onClose={closeAddPatient} onCreate={onCreatedPatient} loading={loading} />
-      <ClinicalRecordModal open={showRecordModal} patient={selectedPatient} onClose={() => setShowRecordModal(false)} />
-      
-      {/* Nuevo BookingModal */}
-      <BookingModal 
-        open={showBookingModal} 
-        onClose={closeBookingModal} 
-        onSuccess={onBookingSuccess} 
-      />
-      <TurnoDetailsModal 
-        open={showTurnoDetailsModal} 
-        turno={selectedTurno} 
-        onClose={closeTurnoDetails} 
-        onEdit={onEditTurnoFromDetails}
-        onDelete={onDeleteTurnoFromDetails}
-      />
-      <EditTurnoModal 
-        open={showEditTurnoModal}
-        turno={selectedTurno}
-        onClose={closeEditTurno}
-        onSaved={onTurnoSaved}
-        onDeleted={onTurnoDeleted}
-      />
-    </div>
+    </ModalsProvider>
   );
 }
 
@@ -476,10 +246,10 @@ export default function App() {
 
   return (
     <Router>
-      <AuthedApp 
-        onLogout={handleLogout} 
-        justLoggedIn={justLoggedIn} 
-        onConsumedLogin={handleConsumedLogin} 
+      <AuthedApp
+        onLogout={handleLogout}
+        justLoggedIn={justLoggedIn}
+        onConsumedLogin={handleConsumedLogin}
       />
     </Router>
   );
