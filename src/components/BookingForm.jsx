@@ -248,7 +248,7 @@ export default function BookingForm({ onSuccess }) {
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-4">¡Turno Confirmado!</h2>
         <p className="text-gray-600 mb-6">
-          Tu turno ha sido agendado exitosamente. Recibirás un recordatorio por WhatsApp un día antes.
+          El turno ha sido agendado exitosamente.
         </p>
         <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm mb-6">
           <div className="flex justify-between">
@@ -277,7 +277,7 @@ export default function BookingForm({ onSuccess }) {
   return (
     <div className="bg-white">
       {/* Header */}
-      <div className="bg-gradient-to-r from-teal-600 to-blue-600 p-6 text-white text-center">
+      <div className="sticky top-0 z-[1] bg-teal-600 p-6 text-white text-center shadow-sm">
         <h1 className="text-3xl font-bold mb-2">Agendar Turno</h1>
         <p className="text-teal-100">Completa los datos para reservar tu cita</p>
       </div>
@@ -494,7 +494,7 @@ export default function BookingForm({ onSuccess }) {
           <button
             type="submit"
             disabled={!isFormValid() || loading}
-            className="w-full bg-gradient-to-r from-teal-600 to-blue-600 text-white py-3 px-6 rounded-lg font-medium text-lg hover:from-teal-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
+            className="w-full bg-teal-600 text-white py-3 px-6 rounded-lg font-medium text-lg hover:from-teal-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
