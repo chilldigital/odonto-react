@@ -92,7 +92,11 @@ export function ModalsProvider({ children, addPatient, updatePatient, refreshTur
   const onTurnoDeleted = useCallback((deletedTurno) => {
     if (typeof refreshTurnos === 'function') refreshTurnos();
     // Notificar a otras vistas que usan su propio hook de turnos
-    try { window.dispatchEvent(new CustomEvent('turnos:refresh')); } catch {}
+    try {
+      const id = deletedTurno?.id || deletedTurno?.eventId || deletedTurno?._id;
+      window.dispatchEvent(new CustomEvent('turnos:refresh'));
+      if (id) window.dispatchEvent(new CustomEvent('turnos:deleted', { detail: { id } }));
+    } catch {}
     setShowEditTurnoModal(false);
     setShowTurnoDetailsModal(false);
     setSelectedTurno(null);

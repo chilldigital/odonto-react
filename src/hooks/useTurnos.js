@@ -77,5 +77,21 @@ export function useTurnos(fromDate = null, toDate = null) {
     fetchTurnos(fromDate, toDate);
   }, [fetchTurnos, fromDate, toDate]);
 
+  // Escuchar eventos globales para refrescar o eliminar localmente
+  useEffect(() => {
+    const handleRefresh = () => fetchTurnos(fromDate, toDate);
+    const handleDeleted = (e) => {
+      const id = e && e.detail && e.detail.id;
+      if (!id) return;
+      setTurnos((prev) => prev.filter((ev) => (ev?.id || ev?.eventId || ev?._id) !== id));
+    };
+    window.addEventListener('turnos:refresh', handleRefresh);
+    window.addEventListener('turnos:deleted', handleDeleted);
+    return () => {
+      window.removeEventListener('turnos:refresh', handleRefresh);
+      window.removeEventListener('turnos:deleted', handleDeleted);
+    };
+  }, [fetchTurnos, fromDate, toDate]);
+
   return { turnos, loading, error, refreshTurnos, fetchTurnos };
 }
