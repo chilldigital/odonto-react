@@ -48,10 +48,32 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
         (turno.tipoTurnoNombre || '').toLowerCase().includes(type.name.toLowerCase())
       ) || {}).id || '';
 
+      // Obtener DNI: usar campo explícito o parsear de la descripción
+      let dniInicial = turno.patientDni || turno.dni || '';
+      if (!dniInicial) {
+        const text = String(turno.description || '');
+        const m1 = text.match(/dni\s*[:\-]?\s*([0-9\.\s]+)/i);
+        if (m1 && m1[1]) {
+          dniInicial = String(m1[1]).replace(/\D/g, '');
+        } else {
+          const m2 = text.match(/(^|\D)(\d{7,9})(?!\d)/);
+          if (m2 && m2[2]) dniInicial = m2[2];
+        }
+      }
+      // Normalizar a solo dígitos
+      dniInicial = String(dniInicial || '').replace(/\D/g, '');
+
+      // Nombre desde descripción como fallback
+      const nombreDesdeDescripcion = (() => {
+        const text = String(turno.description || '');
+        const m = text.match(/Paciente\s*[:\-]?\s*(.+?)(?=\s*(DNI|Dni|dni)\b|$)/);
+        return m && m[1] ? m[1].trim() : '';
+      })();
+
       setFormData({
         id: turno.id || turno.eventId || turno._id || '',
-        dni: turno.patientDni || turno.dni || '',
-        nombre: turno.patientName || turno.paciente || '',
+        dni: dniInicial,
+        nombre: turno.patientName || turno.paciente || nombreDesdeDescripcion || '',
         telefono: turno.patientPhone || turno.telefono || '',
         obraSocial: turno.obraSocial || '',
         numeroAfiliado: turno.numeroAfiliado || '',
@@ -63,14 +85,21 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
         notas: turno.description || turno.notas || ''
       });
 
-      setPatientFound(!!turno.patientDni);
+      // Aún no sabemos si existe en base; esperar resultado de checkPatient
+      setPatientFound(false);
       setError('');
+
+      // Traer datos del paciente automáticamente al abrir si hay DNI
+      if (dniInicial) {
+        checkPatient(dniInicial);
+      }
     }
   }, [open, turno]);
 
   // Consultar paciente por DNI
   const checkPatient = async (dni) => {
-    if (!dni || dni.length < 8) {
+    // Aceptar DNIs de 7 a 9 dígitos
+    if (!dni || String(dni).replace(/\D/g, '').length < 7) {
       setPatientFound(false);
       return;
     }
@@ -224,7 +253,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
 
   const isFormValid = () => {
     return (
-      formData.dni && formData.nombre && formData.telefono &&
+      formData.dni && formData.nombre &&
       formData.tipoTurno && formData.fecha && formData.hora
     );
   };
@@ -266,10 +295,8 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
                   <input
                     type="text"
                     value={formData.dni}
-                    onChange={(e) => handleInputChange('dni', e.target.value)}
-                    placeholder="12.345.678"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                    required
+                    readOnly
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed text-gray-700"
                   />
                   {checkingPatient && (
                     <Loader className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 animate-spin" />
@@ -291,29 +318,28 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
                   <input
                     type="text"
                     value={formData.nombre}
+                    readOnly
                     onChange={(e) => handleInputChange('nombre', e.target.value)}
                     placeholder="Juan Pérez"
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                     required
                   />
                 </div>
-                <div>
+                <div className="hidden">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <Phone className="inline w-4 h-4 mr-1" /> Teléfono
                   </label>
                   <input
                     type="tel"
                     value={formData.telefono}
-                    onChange={(e) => handleInputChange('telefono', e.target.value)}
-                    placeholder="+54 381 123 4567"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                    required
+                    readOnly
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed text-gray-700"
                   />
                 </div>
               </div>
 
               {/* Obra Social */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="hidden">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Obra Social</label>
                   <input
@@ -337,7 +363,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
               </div>
 
               {/* Información médica */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="hidden">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Alergias</label>
                   <input
