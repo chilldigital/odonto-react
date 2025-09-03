@@ -140,10 +140,13 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
       const appointmentType = APPOINTMENT_TYPES.find(t => t.id === tipoTurno);
       const response = await fetch(`${N8N_ENDPOINTS.GET_AVAILABILITY}?fecha=${fecha}&duration=${appointmentType?.duration || 30}&excludeId=${formData.id}`);
       const data = await response.json();
-      setAvailableSlots([...(data.availableSlots || []), formData.hora].filter(Boolean));
+      const raw = Array.isArray(data?.availableSlots) ? data.availableSlots : [];
+      // Quitar duplicados y ordenar
+      const unique = Array.from(new Set(raw)).sort();
+      setAvailableSlots(unique);
     } catch (err) {
       console.error('Error getting availability:', err);
-      setAvailableSlots([formData.hora].filter(Boolean));
+      setAvailableSlots([]);
     } finally {
       setLoadingAvailability(false);
     }
@@ -169,12 +172,15 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
   }, [formData.fecha]);
 
   const handleInputChange = (field, value) => {
+    // Si cambia fecha o tipo, limpiar hora seleccionada para evitar inconsistencias
+    if (field === 'fecha' || field === 'tipoTurno') {
+      const next = { ...formData, [field]: value, hora: '' };
+      setFormData(next);
+      if (next.fecha && next.tipoTurno) getAvailableSlots(next.fecha, next.tipoTurno);
+      return;
+    }
     setFormData(prev => ({ ...prev, [field]: value }));
     if (field === 'dni') checkPatient(value);
-    if (field === 'fecha' || field === 'tipoTurno') {
-      const newData = { ...formData, [field]: value };
-      if (newData.fecha && newData.tipoTurno) getAvailableSlots(newData.fecha, newData.tipoTurno);
-    }
   };
 
   const handleSave = async (e) => {

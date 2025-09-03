@@ -89,6 +89,10 @@ export function ModalsProvider({ children, addPatient, updatePatient, refreshTur
 
   const onTurnoSaved = useCallback((updatedTurno) => {
     if (typeof refreshTurnos === 'function') refreshTurnos();
+    // Notificar globalmente (Dashboard y otras vistas con su propio hook)
+    try {
+      window.dispatchEvent(new CustomEvent('turnos:refresh'));
+    } catch {}
     setShowEditTurnoModal(false);
     setSelectedTurno(null);
   }, [refreshTurnos]);
