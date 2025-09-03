@@ -302,6 +302,8 @@ Los siguientes contratos reflejan lo que envía el frontend y lo que se espera r
 - Si `get-patients` no devuelve `{ patients: [...] }`, la tabla aparecerá vacía.
 - `MessagePatientModal` está listo a nivel UI, pero no se conecta a `send-message` en el árbol actual; si querés, puedo cablearlo.
 - El endpoint de lectura de calendario actual es `/webhook/turnos-hoy` con parámetros `from`, `to` y `timeZone`.
+- Cancelar turno: la UI envía POST a `/webhook/delete-appointment` con `{ id, reason, canceledAt }`. Asegurate de tener ese webhook creado en n8n. Si el feed de calendario no trae `id`, ahora se toleran `eventId` o `_id` como fallback.
+- Si ves `Webhook "/webhook/delete-appointment" no encontrado (404)`, falta publicar ese flujo en n8n o la URL base `REACT_APP_N8N_BASE` no es correcta.
 
 —
 
@@ -311,4 +313,3 @@ Los siguientes contratos reflejan lo que envía el frontend y lo que se espera r
 - [ ] Flujos n8n activos: auth, pacientes, turnos, calendario, mensajería
 - [ ] CORS y seguridad configurados
 - [ ] Respuestas de n8n con estructuras esperadas
-

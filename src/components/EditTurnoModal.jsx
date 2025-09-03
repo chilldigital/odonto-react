@@ -27,6 +27,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
   const [availableSlots, setAvailableSlots] = useState([]);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [error, setError] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
 
   // Inicializar formulario cuando se abre el modal
   useEffect(() => {
@@ -48,7 +49,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
       ) || {}).id || '';
 
       setFormData({
-        id: turno.id || '',
+        id: turno.id || turno.eventId || turno._id || '',
         dni: turno.patientDni || turno.dni || '',
         nombre: turno.patientName || turno.paciente || '',
         telefono: turno.patientPhone || turno.telefono || '',
@@ -192,7 +193,6 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('¿Estás seguro de que deseas cancelar este turno? Esta acción no se puede deshacer.')) return;
     setDeleting(true);
     setError('');
     try {
@@ -207,7 +207,10 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al cancelar el turno');
+        if (response.status === 404) {
+          throw new Error('Webhook "/webhook/delete-appointment" no encontrado (404)');
+        }
+        throw new Error(errorData.message || `Error al cancelar el turno (HTTP ${response.status})`);
       }
       if (onDeleted) onDeleted(turno);
       onClose();
@@ -442,7 +445,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
               <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
                 <button
                   type="button"
-                  onClick={handleDelete}
+                  onClick={() => setShowConfirm(true)}
                   disabled={deleting || loading}
                   className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
@@ -460,7 +463,31 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
           </div>
         </div>
       </div>
+      {showConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowConfirm(false)} />
+          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Cancelar turno</h3>
+            <p className="text-sm text-gray-600 mb-6">¿Confirmás la cancelación de este turno? Esta acción no se puede deshacer.</p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                type="button"
+                onClick={() => setShowConfirm(false)}
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                Volver
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowConfirm(false); handleDelete(); }}
+                className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+              >
+                Cancelar turno
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
