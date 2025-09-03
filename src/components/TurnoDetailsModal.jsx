@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
-import { X, Calendar, Clock, User, Phone, CreditCard, MapPin, FileText, Edit, Trash2 } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { X, Calendar, Clock, User, Phone, CreditCard, MapPin, FileText, Edit, Trash2, Loader, AlertCircle } from 'lucide-react';
+import { N8N_ENDPOINTS } from '../config/n8n';
 
 export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDelete }) {
   if (!open || !turno) return null;
 
   const [showConfirm, setShowConfirm] = useState(false);
+  const [patientLoading, setPatientLoading] = useState(false);
+  const [patientError, setPatientError] = useState('');
+  const [patient, setPatient] = useState(null);
 
   const formatDateTime = (dateTimeStr) => {
     if (!dateTimeStr) return { date: 'Sin fecha', time: 'Sin hora' };
@@ -38,6 +42,94 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
 
   const { date, time } = formatDateTime(turno.start || turno.startTime);
   const duration = getDuration();
+
+  // Extract DNI from event data (field or description text)
+  const dni = useMemo(() => {
+    // Prefer explicit fields from the event
+    const explicit = turno.patientDni || turno.dni;
+    if (explicit) return String(explicit).replace(/\D/g, '');
+
+    // Robust parsing from description
+    const text = String(turno.description || '');
+    // 1) Look for "dni: 12.345.678" or "dni 12345678" (case-insensitive)
+    const m1 = text.match(/dni\s*[:\-]?\s*([0-9\.\s]+)/i);
+    if (m1 && m1[1]) {
+      const onlyDigits = String(m1[1]).replace(/\D/g, '');
+      if (onlyDigits.length >= 7 && onlyDigits.length <= 9) return onlyDigits;
+    }
+    // 2) Last resort: any 7–9 digit chunk not part of a longer number
+    const m2 = text.match(/(^|\D)(\d{7,9})(?!\d)/);
+    if (m2 && m2[2]) return m2[2];
+
+    return '';
+  }, [turno]);
+
+  // Extract patient name from description as a fallback (e.g., "Paciente: Juan Pérez Dni: ...")
+  const nameFromDescription = useMemo(() => {
+    const text = String(turno.description || '');
+    // Try to capture between "Paciente:" and "DNI"/"Dni" or end of string
+    const m = text.match(/Paciente\s*[:\-]?\s*(.+?)(?=\s*(DNI|Dni|dni)\b|$)/);
+    if (m && m[1]) return m[1].trim();
+    return '';
+  }, [turno]);
+
+  // Fetch patient details by DNI when modal opens
+  useEffect(() => {
+    let aborted = false;
+    async function run() {
+      if (!open) return;
+      if (!dni || dni.length < 7) {
+        setPatient(null);
+        setPatientError('');
+        return;
+      }
+      setPatientLoading(true);
+      setPatientError('');
+      try {
+        const resp = await fetch(`${N8N_ENDPOINTS.CHECK_PATIENT}?dni=${encodeURIComponent(dni)}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        if (!aborted) {
+          if (data && data.found && data.patient) {
+            setPatient(data.patient);
+          } else {
+            setPatient(null);
+          }
+        }
+      } catch (err) {
+        if (!aborted) {
+          setPatientError('No se pudo obtener el paciente');
+          setPatient(null);
+        }
+      } finally {
+        if (!aborted) setPatientLoading(false);
+      }
+    }
+    run();
+    return () => {
+      aborted = true;
+    };
+  }, [open, dni]);
+
+  const display = useMemo(() => {
+    const safe = (v) => (v == null || v === '' ? null : String(v));
+    return {
+      name: safe(
+        patient?.nombre ||
+          patient?.name ||
+          turno.patientName ||
+          turno.paciente ||
+          nameFromDescription
+      ),
+      phone: safe(patient?.telefono || patient?.phone || turno.patientPhone),
+      dni: safe(dni),
+      obraSocial: safe(patient?.obraSocial || patient?.insurance || turno.obraSocial),
+      numeroAfiliado: safe(patient?.numeroAfiliado || patient?.affiliateNumber || turno.numeroAfiliado),
+      alergias: safe(patient?.alergias || patient?.allergies || turno.alergias),
+      antecedentes: safe(patient?.antecedentes || patient?.background || turno.antecedentes),
+      email: safe(patient?.email),
+    };
+  }, [patient, turno, dni, nameFromDescription]);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -81,31 +173,45 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Información del Paciente</h3>
 
+                {patientLoading && (
+                  <div className="flex items-start gap-3 text-gray-500 text-sm">
+                    <Loader className="mt-0.5 animate-spin" size={16} />
+                    Buscando paciente por DNI...
+                  </div>
+                )}
+
+                {!patientLoading && patientError && (
+                  <div className="flex items-start gap-2 text-red-600 text-sm">
+                    <AlertCircle size={16} />
+                    {patientError}
+                  </div>
+                )}
+
                 <div className="flex items-start gap-3">
                   <User className="text-gray-400 mt-1" size={16} />
                   <div>
                     <p className="text-sm font-bold text-gray-900">
-                      {turno.patientName || turno.paciente || 'Sin nombre'}
+                      {display.name || 'Sin nombre'}
                     </p>
                     <p className="text-sm text-gray-500">Paciente</p>
                   </div>
                 </div>
 
-                {turno.patientPhone && (
+                {display.phone && (
                   <div className="flex items-start gap-3">
                     <Phone className="text-gray-400 mt-1" size={16} />
                     <div>
-                      <p className="font-medium text-gray-900">{turno.patientPhone}</p>
+                      <p className="font-medium text-gray-900">{display.phone}</p>
                       <p className="text-sm text-gray-500">Teléfono</p>
                     </div>
                   </div>
                 )}
 
-                {turno.patientDni && (
+                {display.dni && (
                   <div className="flex items-start gap-3">
                     <CreditCard className="text-gray-400 mt-1" size={16} />
                     <div>
-                      <p className="font-medium text-gray-900">{turno.patientDni}</p>
+                      <p className="font-medium text-gray-900">{display.dni}</p>
                       <p className="text-sm text-gray-500">DNI</p>
                     </div>
                   </div>
