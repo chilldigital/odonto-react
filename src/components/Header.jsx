@@ -34,7 +34,7 @@ export default function Header({ title, setSidebarOpen, onLogout }) {
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg p-2 transition-colors"
+              className="flex items-center space-x-2 rounded-lg p-2 transition-colors"
             >
               <img
                 src="/profile.jpg"
