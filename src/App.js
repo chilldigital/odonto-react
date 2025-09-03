@@ -47,7 +47,7 @@ import TurnoDetailsModal from './components/TurnoDetailsModal';
 import EditTurnoModal from './components/EditTurnoModal';
 import LoginView from './components/LoginView';
 
-import { URL_DELETE_PATIENT } from './config/n8n';
+import { URL_DELETE_PATIENT, N8N_ENDPOINTS } from './config/n8n';
 
 const titleByPath = (pathname) => {
   if (pathname.startsWith('/pacientes')) return 'Pacientes';
@@ -205,6 +205,37 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
     setShowEditTurnoModal(true);
   }, []);
 
+  const onDeleteTurnoFromDetails = useCallback(async (turno) => {
+    if (!turno || !turno.id) {
+      alert('No se pudo identificar el turno a cancelar');
+      return;
+    }
+    if (!window.confirm('¿Estás seguro de cancelar este turno?')) return;
+    try {
+      const response = await fetch(N8N_ENDPOINTS.DELETE_APPOINTMENT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: turno.id,
+          reason: 'Cancelado desde Dashboard',
+          canceledAt: new Date().toISOString()
+        })
+      });
+      if (!response.ok) {
+        let message = '';
+        try {
+          const data = await response.json();
+          message = data?.message || '';
+        } catch {}
+        throw new Error(message || 'Error al cancelar el turno');
+      }
+      onTurnoDeleted(turno);
+    } catch (err) {
+      console.error('Error cancelando turno:', err);
+      alert(err.message || 'No se pudo cancelar el turno.');
+    }
+  }, [onTurnoDeleted]);
+
   const closeTurnoDetails = useCallback(() => {
     setShowTurnoDetailsModal(false);
     setSelectedTurno(null);
@@ -344,7 +375,7 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
             />
             <Route 
               path="/turnos" 
-              element={<TurnosView onOpenBooking={openBookingModal} />} // Nueva prop
+              element={<TurnosView onOpenBooking={openBookingModal} onViewTurno={onViewTurno} />} // Nueva prop
             />
             <Route
               path="/pacientes"
@@ -376,6 +407,20 @@ function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
         open={showBookingModal} 
         onClose={closeBookingModal} 
         onSuccess={onBookingSuccess} 
+      />
+      <TurnoDetailsModal 
+        open={showTurnoDetailsModal} 
+        turno={selectedTurno} 
+        onClose={closeTurnoDetails} 
+        onEdit={onEditTurnoFromDetails}
+        onDelete={onDeleteTurnoFromDetails}
+      />
+      <EditTurnoModal 
+        open={showEditTurnoModal}
+        turno={selectedTurno}
+        onClose={closeEditTurno}
+        onSaved={onTurnoSaved}
+        onDeleted={onTurnoDeleted}
       />
     </div>
   );
