@@ -253,7 +253,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
 
   const isFormValid = () => {
     return (
-      formData.dni && formData.nombre && formData.telefono &&
+      formData.dni && formData.nombre &&
       formData.tipoTurno && formData.fecha && formData.hora
     );
   };
@@ -295,10 +295,8 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
                   <input
                     type="text"
                     value={formData.dni}
-                    onChange={(e) => handleInputChange('dni', e.target.value)}
-                    placeholder="12.345.678"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                    required
+                    readOnly
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed text-gray-700"
                   />
                   {checkingPatient && (
                     <Loader className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 animate-spin" />
@@ -320,29 +318,28 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
                   <input
                     type="text"
                     value={formData.nombre}
+                    readOnly
                     onChange={(e) => handleInputChange('nombre', e.target.value)}
                     placeholder="Juan Pérez"
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                     required
                   />
                 </div>
-                <div>
+                <div className="hidden">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <Phone className="inline w-4 h-4 mr-1" /> Teléfono
                   </label>
                   <input
                     type="tel"
                     value={formData.telefono}
-                    onChange={(e) => handleInputChange('telefono', e.target.value)}
-                    placeholder="+54 381 123 4567"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                    required
+                    readOnly
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed text-gray-700"
                   />
                 </div>
               </div>
 
               {/* Obra Social */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="hidden">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Obra Social</label>
                   <input
@@ -366,7 +363,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
               </div>
 
               {/* Información médica */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="hidden">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Alergias</label>
                   <input
