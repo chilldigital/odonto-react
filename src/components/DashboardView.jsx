@@ -133,34 +133,36 @@ export default function DashboardView({
 
   const handleSearchChange = useCallback((e) => setDashboardSearchTerm(e.target.value), [setDashboardSearchTerm]);
 
-  // Stats dinámicos
+  // Stats dinámicos (usar TODOS los eventos, no sólo los 3 próximos)
   const turnosHoy = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    return turnos.filter(turno => {
-      if (turno.startDate) {
-        return turno.startDate >= today && turno.startDate < tomorrow;
+
+    return (events || []).reduce((acc, ev) => {
+      const start = new Date(ev.start || ev.startTime);
+      if (!isNaN(start.getTime()) && start >= today && start < tomorrow) {
+        return acc + 1;
       }
-      return false;
-    }).length;
-  }, [turnos]);
+      return acc;
+    }, 0);
+  }, [events]);
 
   const turnosSemana = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const nextWeek = new Date(today);
     nextWeek.setDate(nextWeek.getDate() + 7);
-    
-    return turnos.filter(turno => {
-      if (turno.startDate) {
-        return turno.startDate >= today && turno.startDate < nextWeek;
+
+    return (events || []).reduce((acc, ev) => {
+      const start = new Date(ev.start || ev.startTime);
+      if (!isNaN(start.getTime()) && start >= today && start < nextWeek) {
+        return acc + 1;
       }
-      return false;
-    }).length;
-  }, [turnos]);
+      return acc;
+    }, 0);
+  }, [events]);
 
   return (
     <div className="p-4 lg:p-8 bg-gray-50 min-h-screen">

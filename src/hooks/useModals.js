@@ -80,6 +80,10 @@ export function ModalsProvider({ children, addPatient, updatePatient, refreshTur
     if (typeof refreshTurnos === 'function') {
       refreshTurnos();
     }
+    // Notificar globalmente para que otras vistas con su propio hook se refresquen
+    try {
+      window.dispatchEvent(new CustomEvent('turnos:refresh'));
+    } catch {}
     closeBookingModal();
   }, [refreshTurnos, closeBookingModal]);
 

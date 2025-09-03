@@ -122,23 +122,31 @@ export default function BookingForm({ onSuccess }) {
   const availableDates = useMemo(() => {
     const dates = [];
     const today = new Date();
-    
-    for (let i = 1; i <= 14; i++) {
+
+    const toLocalYMD = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
+    // Incluir hoy (i = 0) y los próximos 13 días: total 14 días
+    for (let i = 0; i < 14; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
-      
+
       if (WORK_DAYS.includes(date.getDay())) {
         dates.push({
-          value: date.toISOString().split('T')[0],
-          label: date.toLocaleDateString('es-AR', { 
-            weekday: 'long', 
-            day: '2-digit', 
-            month: 'long' 
+          value: toLocalYMD(date),
+          label: date.toLocaleDateString('es-AR', {
+            weekday: 'long',
+            day: '2-digit',
+            month: 'long',
           })
         });
       }
     }
-    
+
     return dates;
   }, []);
 
