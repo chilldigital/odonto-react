@@ -59,10 +59,10 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
       ></div>
       
       {/* Modal */}
-      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="flex min-h-full items-center justify-center p-4 overflow-hidden">
         <div className="relative bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           {/* Header */}
-          <div className="bg-gradient-to-r from-teal-600 to-blue-600 p-6 text-white relative">
+          <div className="sticky top-0 z-[1] bg-teal-600 p-6 text-white relative">
             <button
               onClick={onClose}
               className="absolute top-4 right-4 p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors"
@@ -210,20 +210,19 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
+                            <button
+                onClick={() => onDelete && onDelete(turno)}
+                className="flex-1 inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                <Trash2 size={16} />
+                Cancelar
+              </button>
               <button
                 onClick={() => onEdit && onEdit(turno)}
                 className="flex-1 inline-flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg transition-colors"
               >
                 <Edit size={16} />
                 Editar Turno
-              </button>
-              
-              <button
-                onClick={() => onDelete && onDelete(turno)}
-                className="flex-1 inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                <Trash2 size={16} />
-                Cancelar
               </button>
             </div>
           </div>

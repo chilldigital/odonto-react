@@ -298,7 +298,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Overlay */}
       <div 
         className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
@@ -307,9 +307,9 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
       
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="relative bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-amber-600 to-orange-600 p-6 text-white relative">
+          <div className="sticky top-0 z-[1] bg-teal-600 p-6 text-white relative">
             <button
               onClick={onClose}
               className="absolute top-4 right-4 p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors"
@@ -319,10 +319,12 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
             
             <div className="pr-12">
               <h2 className="text-2xl font-bold mb-2">Editar Turno</h2>
-              <p className="text-amber-100">Modifica los detalles del turno existente</p>
+              <p className="text-white-100">Modifica los detalles del turno existente</p>
             </div>
           </div>
 
+          {/* Body scrollable */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
           {/* Form */}
           <form onSubmit={handleSave} className="p-6 space-y-6">
             {error && (
@@ -542,24 +544,6 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
               <button
-                type="submit"
-                disabled={!isFormValid() || loading}
-                className="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 text-white py-3 px-6 rounded-lg font-medium hover:from-amber-700 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <Loader className="w-5 h-5 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-5 h-5" />
-                    Guardar Cambios
-                  </>
-                )}
-              </button>
-              
-              <button
                 type="button"
                 onClick={handleDelete}
                 disabled={deleting || loading}
@@ -574,8 +558,26 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
                   'Cancelar Turno'
                 )}
               </button>
+                            <button
+                type="submit"
+                disabled={!isFormValid() || loading}
+                className="flex-1 bg-teal-600 text-white py-3 px-6 rounded-lg font-medium hover:from-amber-700 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-5 h-5" />
+                    Guardar Cambios
+                  </>
+                )}
+              </button>
             </div>
           </form>
+          </div>
         </div>
       </div>
     </div>

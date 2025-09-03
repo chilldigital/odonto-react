@@ -52,55 +52,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, onLogout }) {
             </button>
           </div>
 
-          {/* User Info */}
-          {user && (
-            <div className="p-4 border-b border-gray-200">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center">
-                  <User size={20} className="text-teal-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {user.name || user.username}
-                  </p>
-                  <p className="text-xs text-gray-500 capitalize">
-                    {user.role || 'Usuario'}
-                  </p>
-                </div>
-                
-                {/* User Menu Toggle */}
-                <button
-                  onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="p-1 rounded-lg hover:bg-gray-100 relative"
-                >
-                  <Settings size={16} className="text-gray-400" />
-                </button>
-              </div>
-
-              {/* User Dropdown Menu */}
-              {showUserMenu && (
-                <div className="mt-2 bg-gray-50 rounded-lg border border-gray-200 py-1 shadow-sm">
-                  <button
-                    onClick={handleChangePassword}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                  >
-                    <Lock size={14} />
-                    <span>Cambiar Contraseña</span>
-                  </button>
-                  
-                  <div className="border-t border-gray-200 my-1" />
-                  
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    <LogOut size={14} />
-                    <span>Cerrar Sesión</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+          {/* User Info oculto por pedido: se elimina la sección "Administrador" */}
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-4">
