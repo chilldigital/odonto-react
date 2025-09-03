@@ -42,27 +42,31 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
       <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={onClose} />
       <div className="flex min-h-full items-center justify-center p-4 overflow-hidden">
         <div className="relative bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="sticky top-0 z-[1] bg-teal-600 p-6 text-white relative">
+          {/* Header */}
+          <div className="sticky top-0 z-[1] bg-gray-50 p-6 text-black relative">
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors"
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-black/5 transition-colors"
             >
               <X size={20} />
             </button>
 
             <div className="pr-12">
               <h2 className="text-2xl font-bold mb-2">Detalles del Turno</h2>
-              <div className="flex items-center gap-2 text-teal-100">
-                <Calendar size={16} />
-                <span className="capitalize">{date}</span>
-                <span className="mx-2">·</span>
-                <Clock size={16} />
-                <span>{time} hs</span>
+              {/* Info en una sola línea */}
+              <div className="flex items-center gap-6 text-black whitespace-nowrap min-w-0 text-sm">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Calendar size={14} />
+                  <span className="capitalize truncate">{date}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock size={14} />
+                  <span>{time} hs</span>
+                </div>
                 {duration && (
-                  <>
-                    <span className="mx-2">·</span>
-                    <span>{duration}</span>
-                  </>
+                  <div className="flex items-center gap-2">
+                    <span>({duration})</span>
+                  </div>
                 )}
               </div>
             </div>
@@ -75,10 +79,10 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Información del Paciente</h3>
 
-                <div className="flex items-center gap-3">
-                  <User className="text-gray-400" size={18} />
+                <div className="flex items-start gap-3">
+                  <User className="text-gray-400 mt-1" size={16} />
                   <div>
-                    <p className="font-medium text-gray-900">
+                    <p className="text-sm font-bold text-gray-900">
                       {turno.patientName || turno.paciente || 'Sin nombre'}
                     </p>
                     <p className="text-sm text-gray-500">Paciente</p>
@@ -86,8 +90,8 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
                 </div>
 
                 {turno.patientPhone && (
-                  <div className="flex items-center gap-3">
-                    <Phone className="text-gray-400" size={18} />
+                  <div className="flex items-start gap-3">
+                    <Phone className="text-gray-400 mt-1" size={16} />
                     <div>
                       <p className="font-medium text-gray-900">{turno.patientPhone}</p>
                       <p className="text-sm text-gray-500">Teléfono</p>
@@ -96,8 +100,8 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
                 )}
 
                 {turno.patientDni && (
-                  <div className="flex items-center gap-3">
-                    <CreditCard className="text-gray-400" size={18} />
+                  <div className="flex items-start gap-3">
+                    <CreditCard className="text-gray-400 mt-1" size={16} />
                     <div>
                       <p className="font-medium text-gray-900">{turno.patientDni}</p>
                       <p className="text-sm text-gray-500">DNI</p>
@@ -108,10 +112,12 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
 
               {/* Turno */}
               <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Calendar className="text-gray-400" size={18} />
+                <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Información del Turno</h3>
+
+                <div className="flex items-start gap-3">
+                  <Calendar className="text-gray-400 mt-1" size={16} />
                   <div>
-                    <p className="font-medium text-gray-900">
+                    <p className="text-sm font-medium text-gray-900">
                       {turno.title || turno.summary || turno.tipoTurnoNombre || 'Consulta'}
                     </p>
                     <p className="text-sm text-gray-500">Tipo de consulta</p>
@@ -119,19 +125,23 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
                 </div>
 
                 {turno.location && (
-                  <div className="flex items-center gap-3">
-                    <MapPin className="text-gray-400" size={18} />
+                  <div className="flex items-start gap-3">
+                    <MapPin className="text-gray-400 mt-1" size={16} />
                     <div>
-                      <p className="font-medium text-gray-900">{turno.location}</p>
+                      <p className="text-sm font-medium text-gray-900">{turno.location}</p>
                       <p className="text-sm text-gray-500">Ubicación</p>
                     </div>
                   </div>
                 )}
 
-                <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${turno.status === 'confirmed' ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                <div className="flex items-start gap-3">
+                  <div
+                    className={`w-2.5 h-2.5 mt-2 rounded-full ${
+                      turno.status === 'confirmed' ? 'bg-teal-600' : 'bg-yellow-500'
+                    }`}
+                  />
                   <div>
-                    <p className="font-medium text-gray-900">
+                    <p className="text-sm font-medium text-gray-900">
                       {turno.status === 'confirmed' ? 'Confirmado' : 'Pendiente'}
                     </p>
                     <p className="text-sm text-gray-500">Estado</p>
@@ -146,8 +156,8 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
                 <h3 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Notas</h3>
                 <div className="bg-gray-50 rounded-lg p-4">
                   <div className="flex items-start gap-3">
-                    <FileText className="text-gray-400 mt-1" size={18} />
-                    <p className="text-gray-700 leading-relaxed">{turno.description}</p>
+                    <FileText className="text-gray-400 mt-1" size={16} />
+                    <p className="text-sm text-gray-700 leading-relaxed">{turno.description}</p>
                   </div>
                 </div>
               </div>
@@ -206,4 +216,3 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
     </div>
   );
 }
-
