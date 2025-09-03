@@ -1,0 +1,239 @@
+import React, { createContext, useContext, useCallback, useMemo, useState } from 'react';
+import { N8N_ENDPOINTS } from '../config/n8n';
+
+const ModalsContext = createContext(null);
+
+export function ModalsProvider({ children, addPatient, updatePatient, refreshTurnos }) {
+  // Pacientes
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showRecordModal, setShowRecordModal] = useState(false);
+
+  // Turnos
+  const [selectedTurno, setSelectedTurno] = useState(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [showTurnoDetailsModal, setShowTurnoDetailsModal] = useState(false);
+  const [showEditTurnoModal, setShowEditTurnoModal] = useState(false);
+
+  // Open/close helpers (Pacientes)
+  const closeProfile = useCallback(() => {
+    setShowProfileModal(false);
+    setSelectedPatient(null);
+  }, []);
+
+  const onViewPatient = useCallback((patient) => {
+    setSelectedPatient(patient);
+    setShowProfileModal(true);
+  }, []);
+
+  const onEditFromProfile = useCallback((patient) => {
+    setSelectedPatient(patient);
+    setShowProfileModal(false);
+    setShowEditModal(true);
+  }, []);
+
+  const openAddPatient = useCallback(() => setShowAddModal(true), []);
+  const closeAddPatient = useCallback(() => setShowAddModal(false), []);
+  const closeEditPatient = useCallback(() => setShowEditModal(false), []);
+  const closeRecordModal = useCallback(() => setShowRecordModal(false), []);
+
+  const onOpenRecord = useCallback((p) => {
+    const historiaUrl =
+      p?.historiaUrl ||
+      p?.historiaClinica ||
+      p?.historiaClinicaUrl ||
+      p?.odontogramaUrl ||
+      '';
+    setSelectedPatient({ ...p, historiaUrl });
+    setShowRecordModal(true);
+  }, []);
+
+  // Open/close helpers (Turnos)
+  const openBookingModal = useCallback(() => setShowBookingModal(true), []);
+  const closeBookingModal = useCallback(() => setShowBookingModal(false), []);
+
+  const onViewTurno = useCallback((turno) => {
+    setSelectedTurno(turno);
+    setShowTurnoDetailsModal(true);
+  }, []);
+
+  const onEditTurnoFromDetails = useCallback((turno) => {
+    setSelectedTurno(turno);
+    setShowTurnoDetailsModal(false);
+    setShowEditTurnoModal(true);
+  }, []);
+
+  const closeTurnoDetails = useCallback(() => {
+    setShowTurnoDetailsModal(false);
+    setSelectedTurno(null);
+  }, []);
+
+  const closeEditTurno = useCallback(() => {
+    setShowEditTurnoModal(false);
+    setSelectedTurno(null);
+  }, []);
+
+  // Cross actions that touch data sources
+  const onBookingSuccess = useCallback(() => {
+    if (typeof refreshTurnos === 'function') {
+      refreshTurnos();
+    }
+    closeBookingModal();
+  }, [refreshTurnos, closeBookingModal]);
+
+  const onTurnoSaved = useCallback((updatedTurno) => {
+    if (typeof refreshTurnos === 'function') refreshTurnos();
+    setShowEditTurnoModal(false);
+    setSelectedTurno(null);
+  }, [refreshTurnos]);
+
+  const onTurnoDeleted = useCallback((deletedTurno) => {
+    if (typeof refreshTurnos === 'function') refreshTurnos();
+    setShowEditTurnoModal(false);
+    setShowTurnoDetailsModal(false);
+    setSelectedTurno(null);
+  }, [refreshTurnos]);
+
+  const onDeleteTurnoFromDetails = useCallback(async (turno) => {
+    if (!turno || !turno.id) {
+      alert('No se pudo identificar el turno a cancelar');
+      return;
+    }
+    if (!window.confirm('¿Estás seguro de cancelar este turno?')) return;
+    try {
+      const response = await fetch(N8N_ENDPOINTS.DELETE_APPOINTMENT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: turno.id,
+          reason: 'Cancelado desde Dashboard',
+          canceledAt: new Date().toISOString()
+        })
+      });
+      if (!response.ok) {
+        let message = '';
+        try {
+          const data = await response.json();
+          message = data?.message || '';
+        } catch {}
+        throw new Error(message || 'Error al cancelar el turno');
+      }
+      onTurnoDeleted(turno);
+    } catch (err) {
+      console.error('Error cancelando turno:', err);
+      alert(err.message || 'No se pudo cancelar el turno.');
+    }
+  }, [onTurnoDeleted]);
+
+  const onSavedPatient = useCallback(async (updatedPatientData) => {
+    try {
+      if (typeof updatePatient === 'function') {
+        await updatePatient(updatedPatientData);
+      }
+      setShowEditModal(false);
+      setSelectedPatient(null);
+    } catch (err) {
+      console.error('Error actualizando paciente:', err);
+      alert(`Error: ${err.message || 'No se pudo actualizar el paciente'}`);
+    }
+  }, [updatePatient]);
+
+  const onCreatedPatient = useCallback(async (patientData) => {
+    try {
+      const res = typeof addPatient === 'function' ? await addPatient(patientData) : null;
+      setShowAddModal(false);
+      const createdFallback = {
+        ...patientData,
+        id: patientData?.id || patientData?.airtableId || patientData?.recordId || String(Date.now()),
+        fechaCreacion: patientData?.fechaCreacion || patientData?.fechaRegistro || new Date().toISOString().slice(0, 10),
+        _createdAt: typeof patientData?._createdAt === 'number' ? patientData._createdAt : Date.now(),
+      };
+      const created = (Array.isArray(res) ? res[0]?.patient : res?.patient) || res || createdFallback;
+      return created;
+    } catch (err) {
+      console.error('Error creating patient:', err);
+      alert(`Error: ${err.message || 'No se pudo crear el paciente'}`);
+      throw err;
+    }
+  }, [addPatient]);
+
+  const value = useMemo(() => ({
+    // Paciente state
+    selectedPatient,
+    showProfileModal,
+    showEditModal,
+    showAddModal,
+    showRecordModal,
+    // Turno state
+    selectedTurno,
+    showBookingModal,
+    showTurnoDetailsModal,
+    showEditTurnoModal,
+    // Paciente actions
+    closeProfile,
+    onViewPatient,
+    onEditFromProfile,
+    openAddPatient,
+    closeAddPatient,
+    closeEditPatient,
+    onOpenRecord,
+    closeRecordModal,
+    onSavedPatient,
+    onCreatedPatient,
+    // Turno actions
+    openBookingModal,
+    closeBookingModal,
+    onViewTurno,
+    onEditTurnoFromDetails,
+    onDeleteTurnoFromDetails,
+    closeTurnoDetails,
+    closeEditTurno,
+    onBookingSuccess,
+    onTurnoSaved,
+    onTurnoDeleted,
+  }), [
+    selectedPatient,
+    showProfileModal,
+    showEditModal,
+    showAddModal,
+    showRecordModal,
+    selectedTurno,
+    showBookingModal,
+    showTurnoDetailsModal,
+    showEditTurnoModal,
+    closeProfile,
+    onViewPatient,
+    onEditFromProfile,
+    openAddPatient,
+    closeAddPatient,
+    closeEditPatient,
+    onOpenRecord,
+    closeRecordModal,
+    onSavedPatient,
+    onCreatedPatient,
+    openBookingModal,
+    closeBookingModal,
+    onViewTurno,
+    onEditTurnoFromDetails,
+    onDeleteTurnoFromDetails,
+    closeTurnoDetails,
+    closeEditTurno,
+    onBookingSuccess,
+    onTurnoSaved,
+    onTurnoDeleted,
+  ]);
+
+  return (
+    <ModalsContext.Provider value={value}>
+      {children}
+    </ModalsContext.Provider>
+  );
+}
+
+export function useModals() {
+  const ctx = useContext(ModalsContext);
+  if (!ctx) throw new Error('useModals must be used within a ModalsProvider');
+  return ctx;
+}
