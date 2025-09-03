@@ -48,10 +48,32 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
         (turno.tipoTurnoNombre || '').toLowerCase().includes(type.name.toLowerCase())
       ) || {}).id || '';
 
+      // Obtener DNI: usar campo explícito o parsear de la descripción
+      let dniInicial = turno.patientDni || turno.dni || '';
+      if (!dniInicial) {
+        const text = String(turno.description || '');
+        const m1 = text.match(/dni\s*[:\-]?\s*([0-9\.\s]+)/i);
+        if (m1 && m1[1]) {
+          dniInicial = String(m1[1]).replace(/\D/g, '');
+        } else {
+          const m2 = text.match(/(^|\D)(\d{7,9})(?!\d)/);
+          if (m2 && m2[2]) dniInicial = m2[2];
+        }
+      }
+      // Normalizar a solo dígitos
+      dniInicial = String(dniInicial || '').replace(/\D/g, '');
+
+      // Nombre desde descripción como fallback
+      const nombreDesdeDescripcion = (() => {
+        const text = String(turno.description || '');
+        const m = text.match(/Paciente\s*[:\-]?\s*(.+?)(?=\s*(DNI|Dni|dni)\b|$)/);
+        return m && m[1] ? m[1].trim() : '';
+      })();
+
       setFormData({
         id: turno.id || turno.eventId || turno._id || '',
-        dni: turno.patientDni || turno.dni || '',
-        nombre: turno.patientName || turno.paciente || '',
+        dni: dniInicial,
+        nombre: turno.patientName || turno.paciente || nombreDesdeDescripcion || '',
         telefono: turno.patientPhone || turno.telefono || '',
         obraSocial: turno.obraSocial || '',
         numeroAfiliado: turno.numeroAfiliado || '',
@@ -63,14 +85,21 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
         notas: turno.description || turno.notas || ''
       });
 
-      setPatientFound(!!turno.patientDni);
+      // Aún no sabemos si existe en base; esperar resultado de checkPatient
+      setPatientFound(false);
       setError('');
+
+      // Traer datos del paciente automáticamente al abrir si hay DNI
+      if (dniInicial) {
+        checkPatient(dniInicial);
+      }
     }
   }, [open, turno]);
 
   // Consultar paciente por DNI
   const checkPatient = async (dni) => {
-    if (!dni || dni.length < 8) {
+    // Aceptar DNIs de 7 a 9 dígitos
+    if (!dni || String(dni).replace(/\D/g, '').length < 7) {
       setPatientFound(false);
       return;
     }
