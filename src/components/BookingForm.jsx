@@ -2,8 +2,10 @@
 import React, { useState, useMemo } from 'react';
 import { Calendar, Clock, User, CreditCard, Phone, AlertCircle, CheckCircle, Loader } from 'lucide-react';
 import { N8N_ENDPOINTS } from '../config/n8n';
+import { APPOINTMENT_TYPES, WORK_DAYS } from '../config/appointments';
+import { combineDateTimeToISO } from '../utils/appointments';
 
-const APPOINTMENT_TYPES = [
+const LOCAL_APPOINTMENT_TYPES = [
   { id: 'consulta', name: 'Consulta', duration: 30 },
   { id: 'limpieza', name: 'Limpieza', duration: 45 },
   { id: 'ensenanza', name: 'Enseñanza de técnica de cepillado y flúor en niños', duration: 30 },
@@ -17,7 +19,7 @@ const APPOINTMENT_TYPES = [
   { id: 'incrustaciones', name: 'Incrustaciones', duration: 75 }
 ];
 
-const WORK_DAYS = [1, 2, 3, 4]; // Lunes a Jueves
+const LOCAL_WORK_DAYS = [1, 2, 3, 4]; // Lunes a Jueves
 
 export default function BookingForm({ onSuccess }) {
   // Form state
@@ -166,10 +168,11 @@ export default function BookingForm({ onSuccess }) {
       const appointmentType = APPOINTMENT_TYPES.find(t => t.id === formData.tipoTurno);
       
       // Combinar fecha y hora en formato ISO completo
-      const [hours, minutes] = formData.hora.split(':');
-      const appointmentDateTime = new Date(formData.fecha);
-      appointmentDateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-      const appointmentISO = appointmentDateTime.toISOString();
+      const appointmentISO = combineDateTimeToISO(
+        formData.fecha,
+        formData.hora,
+        'America/Argentina/Buenos_Aires'
+      );
       
       const response = await fetch(N8N_ENDPOINTS.CREATE_APPOINTMENT, {
         method: 'POST',
@@ -279,7 +282,7 @@ export default function BookingForm({ onSuccess }) {
       {/* Header */}
       <div className="sticky top-0 z-[1] bg-teal-600 p-6 text-white text-center shadow-sm">
         <h1 className="text-3xl font-bold mb-2">Agendar Turno</h1>
-        <p className="text-teal-100">Completa los datos para reservar tu cita</p>
+        <p className="text-teal-100">Completá los datos para reservar tu cita</p>
       </div>
 
       {/* Form */}

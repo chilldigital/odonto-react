@@ -5,7 +5,7 @@ import { BrowserRouter as Router } from 'react-router-dom';
 
 import { isAuthenticated, saveAuth, clearAuth, getTokenInfo } from './utils/auth';
 import LoginView from './components/LoginView';
-import AuthedApp from './components/AuthedApp';
+import AuthedApp from './components/AuthedApp.jsx';
 
 export default function App() {
   const [authed, setAuthed] = useState(() => isAuthenticated());
