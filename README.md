@@ -1,257 +1,314 @@
-# Dental Dashboard — README
+# Odonto React - Dental Dashboard
 
-Aplicación React para gestionar pacientes y turnos de un consultorio odontológico.  
-El proyecto está organizado en componentes, integra **n8n** para el backend sin servidor, **Airtable** para datos de pacientes y **Google Calendar** (vía **cal.com**) para turnos.  
+Aplicación React para gestionar pacientes y turnos de un consultorio odontológico. El backend se resuelve con flujos de n8n (webhooks), usando Airtable para almacenamiento de pacientes y Google Calendar para agenda. La app incluye login y módulo de turnos con disponibilidad, creación, edición y cancelación.
 
-> **Objetivo:** mantener una UI simple (Dashboard, Turnos, Pacientes) con modales para ver, editar, crear y mensajear pacientes, y con un calendario que lee eventos desde Google Calendar.
+—
 
----
+## Requisitos
 
-## 🧱 Requisitos
+- Node.js 18.x (ver `.nvmrc`)
+- npm (o yarn)
+- Servidor n8n accesible con los siguientes flujos/webhooks:
+  - Pacientes: get/create/update/delete
+  - Turnos: availability/create/update/delete y lectura de eventos del calendario
+  - Auth: auth-login, forgot-password, change-password
+- Conexiones del n8n: Airtable (pacientes) y Google Calendar (turnos)
 
-- Node.js ≥ 18
-- npm o yarn
-- Cuenta n8n con acceso a:
-  - **Airtable** (para pacientes)
-  - **Google Calendar** (para lectura de eventos)
-- **cal.com** conectado al **Google Calendar** del profesional
-- (Opcional) repositorio en GitHub
-
-Instalación de dependencias (si usás las librerías del proyecto):
+Instalar dependencias:
 ```bash
-npm i
-npm i lucide-react
+npm install
 ```
 
----
+—
 
-## 🚀 Puesta en marcha
+## Puesta en marcha
 
-1) Crear archivo `.env` en la raíz del proyecto:
+1) Variables de entorno (`.env` en la raíz):
 ```
 REACT_APP_N8N_BASE=https://tu-n8n.dominio.com
-REACT_APP_CAL_LINK=https://cal.com/tu-usuario
 ```
-2) Ejecutar en desarrollo:
+
+2) Modo desarrollo:
 ```bash
 npm start
 ```
-3) Build para producción:
+
+3) Build producción:
 ```bash
 npm run build
 ```
 
----
+—
 
-## 🗂️ Estructura del proyecto
+## Estructura (resumen)
 
 ```
 src/
-├─ App.js                 # Orquesta vistas, estado global y modales
-├─ App.css
+├─ App.js                     # Boot, auth, Router
+├─ components/
+│  ├─ AuthedApp.jsx           # Layout autenticado + ModalsRoot
+│  ├─ DashboardView.jsx       # KPIs + próximos turnos + atajos
+│  ├─ TurnosView.jsx          # Listado por fechas + filtros
+│  ├─ PacientesView.jsx       # Buscador + tabla pacientes
+│  ├─ BookingModal.jsx        # Modal con BookingForm
+│  ├─ BookingForm.jsx         # Crear turno (check patient + availability)
+│  ├─ EditTurnoModal.jsx      # Editar/Cancelar turno
+│  ├─ TurnoDetailsModal.jsx   # Detalle de turno
+│  ├─ AddPatientModal.jsx     # Alta paciente (archivo opcional)
+│  ├─ EditPatientModal.jsx    # Edición paciente (archivo opcional)
+│  ├─ PatientProfileModal.jsx # Perfil + eliminar + abrir editar
+│  ├─ MessagePatientModal.jsx # IU de mensaje (no conectado aún)
+│  ├─ ... (Sidebar, Header, tablas, inputs, etc.)
+├─ hooks/
+│  ├─ useTurnos.js            # Carga eventos desde n8n
+│  ├─ usePatients.js          # CRUD pacientes contra n8n
+│  ├─ useModals.js            # Estado central de modales/acciones
+│  └─ useNormalizedPatients.js
+├─ services/
+│  └─ PatientService.js       # GET/POST pacientes (JSON o FormData)
 ├─ config/
-│  └─ n8n.js              # Endpoints centralizados de n8n
-├─ data/
-│  └─ mockData.js         # Pacientes de ejemplo y próximos turnos (mock)
+│  ├─ n8n.js                  # BaseURL y endpoints centralizados
+│  └─ appointments.js         # Tipos de turno + días laborales
 ├─ utils/
-│  └─ helpers.js          # helpers (initials, cls)
-└─ components/
-   ├─ Sidebar.jsx
-   ├─ Header.jsx
-   ├─ StatsCard.jsx
-   ├─ SearchInput.jsx
-   ├─ PatientTable.jsx
-   ├─ ModalShell.jsx
-   ├─ TextInput.jsx
-   ├─ Chip.jsx
-   ├─ PatientProfileModal.jsx
-   ├─ EditPatientModal.jsx
-   ├─ AddPatientModal.jsx
-   ├─ MessagePatientModal.jsx
-   ├─ DashboardView.jsx
-   ├─ PacientesView.jsx
-   └─ TurnosView.jsx
+│  ├─ appointments.js         # Utilidades de fechas/normalización
+│  ├─ auth.js                 # JWT, headers y fetch seguro
+│  └─ helpers.js              # Misceláneos
+└─ router/
+   └─ AppRoutes.jsx           # Rutas principales
 ```
 
-**App.js** mantiene:
-- Vista activa (`dashboard` | `turnos` | `pacientes`)
-- Listado de pacientes (estado local, se actualiza al crear/editar)
-- Búsquedas (dashboard y pacientes)
-- Manejo de modales (ver, editar, crear, mensaje)
+Rutas y endpoints están centralizados en: `src/config/n8n.js:1`.
 
----
+—
 
-## 🔌 Configuración de endpoints (n8n)
+## Configuración n8n (endpoints)
 
-Archivo: `src/config/n8n.js`
+Archivo: `src/config/n8n.js:1`
 
 ```js
-export const N8N_BASE = process.env.REACT_APP_N8N_BASE || 'http://localhost:5678';
-export const URL_UPDATE_PATIENT = `${N8N_BASE}/webhook/update-patient`;
-export const URL_SEND_MESSAGE  = `${N8N_BASE}/webhook/send-message`;
-export const URL_CREATE_PATIENT = `${N8N_BASE}/webhook/create-patient`;
+export const N8N_BASE = process.env.REACT_APP_N8N_BASE || 'https://n8n-automation.chilldigital.tech';
+
+// Pacientes
+export const URL_GET_PATIENTS     = `${N8N_BASE}/webhook/get-patients`;
+export const URL_CREATE_PATIENT   = `${N8N_BASE}/webhook/create-patient`;
+export const URL_UPDATE_PATIENT   = `${N8N_BASE}/webhook/update-patient`;
+export const URL_DELETE_PATIENT   = `${N8N_BASE}/webhook/delete-patient`;
+
+// Calendario / Turnos (lectura)
+export const URL_CALENDAR_EVENTS  = `${N8N_BASE}/webhook/turnos-hoy`;
+
+// Booking (disponibilidad y CRUD turnos)
+export const URL_CHECK_PATIENT       = `${N8N_BASE}/webhook/check-patient`;
+export const URL_GET_AVAILABILITY    = `${N8N_BASE}/webhook/get-availability`;
+export const URL_CREATE_APPOINTMENT  = `${N8N_BASE}/webhook/create-appointment`;
+export const URL_UPDATE_APPOINTMENT  = `${N8N_BASE}/webhook/update-appointment`;
+export const URL_DELETE_APPOINTMENT  = `${N8N_BASE}/webhook/delete-appointment`;
+
+// Mensajería (UI disponible, integración pendiente)
+export const URL_SEND_MESSAGE     = `${N8N_BASE}/webhook/send-message`;
 ```
 
-> **Recomendación:** proteger Webhooks de n8n con token (query o header) y validación.
+—
 
----
+## Contratos de API (webhooks n8n)
 
-## 📄 Contratos de API (n8n)
+Los siguientes contratos reflejan lo que envía el frontend y lo que se espera recibir desde n8n. Donde hay variantes de nombres de campos, la app ya normaliza las respuestas para tolerarlas.
 
-### 1) Crear paciente
-**Frontend → n8n**  
-`POST /webhook/create-patient`
-```json
-{
-  "nombre": "Juan Pérez",
-  "obraSocial": "OSDE",
-  "telefono": "+54 11 5555 5555",
-  "email": "juan@ejemplo.com",
-  "direccion": "CABA"
-}
-```
-**n8n → Frontend** (sugerido)
-```json
-{
-  "id": 123,
-  "airtableId": "recXXX",
-  "data": { "ultimaVisita": "-" }
-}
-```
+### Autenticación
 
-### 2) Editar paciente
-**Frontend → n8n**  
-`POST /webhook/update-patient`
-```json
-{
-  "airtableId": "recXXX",
-  "nombre": "Juan Pérez",
-  "obraSocial": "OSDE",
-  "telefono": "...",
-  "email": "...",
-  "direccion": "..."
-}
-```
-
-### 3) Mensaje a paciente
-**Frontend → n8n**  
-`POST /webhook/send-message`
-```json
-{
-  "airtableId": "recXXX",
-  "toPhone": "+54 11 5555 5555",
-  "toEmail": "juan@ejemplo.com",
-  "channel": "whatsapp",
-  "message": "Hola Juan, te recuerdo tu turno de mañana."
-}
-```
-
-> Estos webhooks se conectan con **Airtable** (crear/editar) y con tu proveedor de **WhatsApp/Email** para el envío (Twilio, SMTP, etc.).
-
----
-
-## 📅 Google Calendar (lectura) + cal.com (creación)
-
-- **Creación de turnos:** se hace en **cal.com**, ya vinculado con el Google Calendar del profesional. La UI expone un botón **“Nuevo turno”** (usa `REACT_APP_CAL_LINK`).  
-- **Lectura de turnos:** se recomienda un workflow n8n **`/webhook/gcal-events`** que llame a **Google Calendar → Get Many** y devuelva `{ events: [...] }` al frontend.  
-- El componente `TurnosView` consulta ese webhook con un rango (día / semana / mes) y muestra la lista agrupada por fecha. Un botón **“Sincronizar”** vuelve a pedir los eventos.
-
-**Sugerencia de query**:  
-`GET /webhook/gcal-events?from=2025-08-01T00:00:00Z&to=2025-08-31T23:59:59Z&timeZone=America/Argentina/Buenos_Aires`
-
-**Formato esperado en respuesta:**
-```json
-{
-  "events": [
+- POST `/webhook/auth-login`
+  - Request (JSON):
+    ```json
     {
-      "id": "abc123",
-      "title": "Consulta",
-      "description": "Paciente: ...",
-      "start": "2025-08-20T15:00:00-03:00",
-      "end": "2025-08-20T15:30:00-03:00",
-      "location": "Consultorio",
-      "attendees": ["paciente@mail.com"],
-      "htmlLink": "https://calendar.google.com/...",
-      "hangoutLink": "https://meet.google.com/..."
+      "username": "admin",
+      "password": "********",
+      "timestamp": "2025-09-03T00:00:00.000Z"
     }
-  ]
-}
-```
+    ```
+  - Respuesta esperada:
+    ```json
+    {
+      "success": true,
+      "token": "<jwt>",
+      "user": { "username": "admin", "name": "Nombre" },
+      "code": null
+    }
+    ```
+    - En error, `code` puede ser `INVALID_CREDENTIALS`, `RATE_LIMITED`, `ACCOUNT_LOCKED` y `message` con detalle.
 
----
+- POST `/webhook/forgot-password`
+  - Request (JSON): `{ "email": "user@dominio.com", "timestamp": "..." }`
+  - Respuesta: `{ "success": true, "message": "..." }`
 
-## 🧩 Componentes y responsabilidades
+- POST `/webhook/change-password`
+  - Headers: `Authorization: Bearer <jwt>` (recomendado)
+  - Request (JSON):
+    ```json
+    {
+      "username": "admin",
+      "currentPassword": "***",
+      "newPassword": "***",
+      "timestamp": "..."
+    }
+    ```
+  - Respuesta: `{ "success": true, "message": "Password actualizado" }`
 
-- **Sidebar / Header**: navegación y encabezado.
-- **StatsCard**: KPIs del Dashboard.
-- **SearchInput**: input controlado (previene perder foco al tipear).
-- **PatientTable**: tabla de pacientes con acción *ver*.
-- **ModalShell**: layout base para modales.
-- **PatientProfileModal**: datos del paciente + acciones *Editar* / *Mensaje*.
-- **EditPatientModal**: formulario editable → `URL_UPDATE_PATIENT`.
-- **AddPatientModal**: alta de paciente → `URL_CREATE_PATIENT`.
-- **MessagePatientModal**: canal (WhatsApp/Email) + texto → `URL_SEND_MESSAGE`.
-- **DashboardView**: KPIs + próximos turnos (mock) + pacientes (top 4).
-- **PacientesView**: buscador + tabla completa.
-- **TurnosView**: calendario liviano (lista por día/semana/mes) + botón **Nuevo turno** y **Sincronizar**.
+### Pacientes
 
----
+- GET `/webhook/get-patients`
+  - Respuesta esperada:
+    ```json
+    { "patients": [ {"id": "recXXX", "nombre": "...", "telefono": "...", "createdTime": "..."} ] }
+    ```
 
-## 🔒 Seguridad
+- POST `/webhook/create-patient`
+  - Dos modos según si hay archivo de historia clínica:
+    - JSON (sin archivo):
+      ```json
+      {
+        "nombre": "Juan Pérez",
+        "dni": "12345678",
+        "telefono": "+54 11 5555 5555",
+        "email": "juan@ejemplo.com",
+        "obraSocial": "OSDE",
+        "numeroAfiliado": "ABC123",
+        "fechaNacimiento": "1990-01-01",
+        "alergias": "Ninguna",
+        "notas": "..."
+      }
+      ```
+    - FormData (con archivo):
+      - Campos: `nombre`, `dni`, `telefono`, `email`, `obraSocial`, `numeroafiliado` (minúsculas para compatibilidad), `fechanacimiento`, `alergias`, `notas`, y `clinicalRecord` (archivo)
+  - Respuesta sugerida (flexible; la app normaliza):
+    ```json
+    {
+      "id": "recXXX",
+      "airtableId": "recXXX",
+      "nombre": "Juan Pérez",
+      "telefono": "+54...",
+      "createdTime": "2025-09-03T00:00:00Z",
+      "historiaClinica": "https://.../archivo.pdf"
+    }
+    ```
 
-- Usar **token** en Webhooks de n8n (header `x-api-key` o query `?token=...`).
-- CORS: permitir sólo el dominio de tu app.
-- No exponer credenciales en el front; todo correo/WhatsApp se envía desde n8n.
+- POST `/webhook/update-patient`
+  - JSON (sin archivo) o FormData (con archivo)
+  - Campos mínimos: `airtableId` y los campos a actualizar
+  - En FormData, el archivo se envía bajo la clave `historiaClinica`
+  - Respuesta: objeto paciente actualizado (la app mergea `{...prev, ...result, ...(result.data||{})}`)
 
----
+- POST `/webhook/delete-patient`
+  - Request (JSON): `{ "id": "recXXX", "airtableId": "recXXX", "nombre": "Juan", "timestamp": "..." }`
+  - Respuesta: `{ "success": true }`
 
-## 🧪 Consejos de testing
+### Mensajería (WhatsApp / Email)
 
-- Mockear respuestas de n8n en desarrollo (ej.: `msw` o JSON locales).
-- Probar validación mínima en *Add/Edit* (nombre requerido, email/phone opcionales).
-- Simular errores de red para chequear feedback de UI.
+- POST `/webhook/send-message`
+  - Request (JSON sugerido):
+    ```json
+    {
+      "channel": "whatsapp", // o "email"
+      "message": "Hola, te recordamos tu turno...",
+      "toPhone": "+54 11 5555 5555",
+      "toEmail": "paciente@dominio.com",
+      "recipientName": "Juan Pérez",
+      "airtableId": "recXXX" // opcional
+    }
+    ```
+  - Respuesta: `{ "success": true, "providerMessageId": "..." }`
+  - Nota: La UI `MessagePatientModal.jsx` existe pero aún no invoca el webhook desde el árbol actual.
 
----
+### Turnos (Booking + Calendario)
 
-## 🛠️ Flujo de desarrollo recomendado
+- GET `/webhook/check-patient?dni=12345678`
+  - Respuesta: `{ "found": true, "patient": { "nombre": "...", "telefono": "...", "obraSocial": "..." } }`
 
-1. **Crear rama** de feature:
-   ```bash
-   git checkout -b feat/nombre-feature
-   ```
-2. **Desarrollar** y **commit** atómico:
-   ```bash
-   git add .
-   git commit -m "feat: agregar modal de creación de pacientes"
-   ```
-3. **Push** a GitHub y abrir **PR**:
-   ```bash
-   git push -u origin feat/nombre-feature
-   ```
+- GET `/webhook/get-availability?fecha=YYYY-MM-DD&duration=30[&excludeId=<id>]`
+  - Respuesta: `{ "availableSlots": ["09:00", "09:30", "10:00"] }`
 
----
+- POST `/webhook/create-appointment`
+  - Request (JSON):
+    ```json
+    {
+      "dni": "12345678",
+      "nombre": "Juan Pérez",
+      "telefono": "+54...",
+      "obraSocial": "OSDE",
+      "numeroAfiliado": "ABC123",
+      "alergias": "Ninguna",
+      "antecedentes": "Ninguno",
+      "tipoTurno": "consulta",
+      "tipoTurnoNombre": "Consulta",
+      "duracion": 30,
+      "fechaHora": "2025-09-03T15:00:00.000Z",
+      "timezone": "America/Argentina/Buenos_Aires",
+      "isNewPatient": false
+    }
+    ```
+  - Respuesta: `{ "success": true, "appointment": { "id": "evt_123", ... } }`
 
-## 🧩 Extensiones futuras
+- POST `/webhook/update-appointment`
+  - Request (JSON): igual a create-appointment, con `id` del turno a actualizar
+  - Respuesta: `{ "success": true, "appointment": { ...actualizado } }`
 
-- Sustituir lista del calendario por **FullCalendar** con grilla Día/Semana/Mes.
-- Plantillas de mensajes (recordatorio, seguimiento).
-- Subida de archivos (recetas/presupuestos) → Airtable Attachments vía n8n.
-- Internacionalización (i18n) y formatos locales de fecha/hora configurables.
+- POST `/webhook/delete-appointment`
+  - Request (JSON): `{ "id": "evt_123", "reason": "Cancelado...", "canceledAt": "..." }`
+  - Respuesta: `{ "success": true }`
 
----
+- GET `/webhook/turnos-hoy?from=<ISO>&to=<ISO>&timeZone=America/Argentina/Buenos_Aires`
+  - Usado por `useTurnos.js`
+  - Respuesta esperada (propiedades tolerantes):
+    ```json
+    {
+      "events": [
+        {
+          "id": "evt_123",
+          "title": "Consulta",          // o "summary"
+          "description": "...",
+          "start": "2025-09-03T15:00:00.000Z", // o "startTime"
+          "end": "2025-09-03T15:30:00.000Z",
+          "location": "Consultorio",
+          "patientName": "Juan Pérez",   // o "paciente"
+          "patientPhone": "+54...",
+          "patientDni": "12345678",
+          "htmlLink": "https://calendar.google.com/..."
+        }
+      ]
+    }
+    ```
 
-## 📋 Checklist rápida
+—
 
-- [ ] `.env` con `REACT_APP_N8N_BASE` y `REACT_APP_CAL_LINK`
-- [ ] Webhooks n8n: `create-patient`, `update-patient`, `send-message`, `gcal-events`
-- [ ] Conexiones n8n a **Airtable**, **Email/WhatsApp**, **Google Calendar**
-- [ ] cal.com vinculado a Google Calendar del profesional
-- [ ] App corriendo con `npm start` y endpoints respondiendo 200
+## Seguridad recomendada
 
----
+- Proteger todos los webhooks con token (por ejemplo `x-api-key`) o `Authorization: Bearer <jwt>` cuando aplique.
+- Configurar CORS en n8n para permitir solo el dominio de la app.
+- Limitar tamaño de archivos en upload de historia clínica y validar tipos (`.pdf`, `image/*`).
+- Registrar y tratar códigos de error coherentes (`code`, `message`).
 
-## Créditos
+—
 
-- UI con clases utilitarias y **lucide-react** para iconos (`npm i lucide-react`).
-- Backend **no-code** con **n8n**.
-- Agenda profesional con **cal.com** + **Google Calendar**.
+## Scripts útiles
+
+- Desarrollo: `npm start`
+- Tests (CRA): `npm test`
+- Build producción: `npm run build`
+
+—
+
+## Notas y troubleshooting
+
+- La app normaliza claves en respuestas (por ejemplo `title|summary`, `start|startTime`, `nombre|name`) para tolerar variaciones del workflow.
+- Si `get-patients` no devuelve `{ patients: [...] }`, la tabla aparecerá vacía.
+- `MessagePatientModal` está listo a nivel UI, pero no se conecta a `send-message` en el árbol actual; si querés, puedo cablearlo.
+- El endpoint de lectura de calendario actual es `/webhook/turnos-hoy` con parámetros `from`, `to` y `timeZone`.
+
+—
+
+## Checklist
+
+- [ ] `.env` con `REACT_APP_N8N_BASE`
+- [ ] Flujos n8n activos: auth, pacientes, turnos, calendario, mensajería
+- [ ] CORS y seguridad configurados
+- [ ] Respuestas de n8n con estructuras esperadas
+
