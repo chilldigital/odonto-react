@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Calendar, Clock, User, Phone, CreditCard, MapPin, FileText, Edit, Trash2 } from 'lucide-react';
 
 export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDelete }) {
   if (!open || !turno) return null;
+
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const formatDateTime = (dateTimeStr) => {
     if (!dateTimeStr) return { date: 'Sin fecha', time: 'Sin hora' };
@@ -196,7 +198,7 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
               <button
-                onClick={() => onDelete && onDelete(turno)}
+                onClick={() => setShowConfirm(true)}
                 className="flex-1 inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
               >
                 <Trash2 size={16} />
@@ -213,6 +215,30 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
           </div>
         </div>
       </div>
+
+      {showConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowConfirm(false)} />
+          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Cancelar turno</h3>
+            <p className="text-sm text-gray-600 mb-6">¿Confirmás la cancelación de este turno? Esta acción no se puede deshacer.</p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                Volver
+              </button>
+              <button
+                onClick={() => { setShowConfirm(false); onDelete && onDelete(turno); }}
+                className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+              >
+                Cancelar turno
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -80,6 +80,10 @@ export function ModalsProvider({ children, addPatient, updatePatient, refreshTur
     if (typeof refreshTurnos === 'function') {
       refreshTurnos();
     }
+    // Notificar globalmente para que otras vistas con su propio hook se refresquen
+    try {
+      window.dispatchEvent(new CustomEvent('turnos:refresh'));
+    } catch {}
     closeBookingModal();
   }, [refreshTurnos, closeBookingModal]);
 
@@ -91,23 +95,29 @@ export function ModalsProvider({ children, addPatient, updatePatient, refreshTur
 
   const onTurnoDeleted = useCallback((deletedTurno) => {
     if (typeof refreshTurnos === 'function') refreshTurnos();
+    // Notificar a otras vistas que usan su propio hook de turnos
+    try {
+      const id = deletedTurno?.id || deletedTurno?.eventId || deletedTurno?._id;
+      window.dispatchEvent(new CustomEvent('turnos:refresh'));
+      if (id) window.dispatchEvent(new CustomEvent('turnos:deleted', { detail: { id } }));
+    } catch {}
     setShowEditTurnoModal(false);
     setShowTurnoDetailsModal(false);
     setSelectedTurno(null);
   }, [refreshTurnos]);
 
   const onDeleteTurnoFromDetails = useCallback(async (turno) => {
-    if (!turno || !turno.id) {
+    const id = turno?.id || turno?.eventId || turno?._id;
+    if (!id) {
       alert('No se pudo identificar el turno a cancelar');
       return;
     }
-    if (!window.confirm('¿Estás seguro de cancelar este turno?')) return;
     try {
       const response = await fetch(N8N_ENDPOINTS.DELETE_APPOINTMENT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: turno.id,
+          id,
           reason: 'Cancelado desde Dashboard',
           canceledAt: new Date().toISOString()
         })
@@ -118,9 +128,12 @@ export function ModalsProvider({ children, addPatient, updatePatient, refreshTur
           const data = await response.json();
           message = data?.message || '';
         } catch {}
-        throw new Error(message || 'Error al cancelar el turno');
+        if (response.status === 404) {
+          throw new Error('Webhook "/webhook/delete-appointment" no encontrado (404)');
+        }
+        throw new Error(message || `Error al cancelar el turno (HTTP ${response.status})`);
       }
-      onTurnoDeleted(turno);
+      onTurnoDeleted({ ...turno, id });
     } catch (err) {
       console.error('Error cancelando turno:', err);
       alert(err.message || 'No se pudo cancelar el turno.');

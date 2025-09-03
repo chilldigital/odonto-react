@@ -1,5 +1,5 @@
 // src/components/TurnosView.jsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Calendar, RefreshCcw, Plus, Eye } from 'lucide-react';
 import { useTurnos } from '../hooks/useTurnos';
 
@@ -89,6 +89,13 @@ export default function TurnosView({ onOpenBooking, onViewTurno }) {
     setDateFrom(todayStr);
     setDateTo(todayStr);
   };
+
+  // Escuchar pedido global de refresco (ej. después de cancelar turno desde otro modal)
+  useEffect(() => {
+    const handler = () => refreshTurnos(dateFrom, dateTo);
+    window.addEventListener('turnos:refresh', handler);
+    return () => window.removeEventListener('turnos:refresh', handler);
+  }, [refreshTurnos, dateFrom, dateTo]);
 
   return (
     <div className="p-4 lg:p-8 bg-gray-50 min-h-screen">

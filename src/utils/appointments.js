@@ -4,12 +4,18 @@
 export function combineDateTimeToISO(fecha, hora, tz = 'America/Argentina/Buenos_Aires') {
   if (!fecha || !hora) return null;
   try {
-    const [hh = '00', mm = '00'] = String(hora).split(':');
-    const d = new Date(fecha);
-    if (Number.isNaN(d.getTime())) return null;
-    d.setHours(parseInt(hh, 10) || 0, parseInt(mm, 10) || 0, 0, 0);
-    // Nota: devolvemos ISO en UTC. El backend puede interpretar con tz si lo requiere.
-    return d.toISOString();
+    // Parsear fecha como LOCAL (evitar new Date('YYYY-MM-DD') que asume UTC)
+    const [yStr, mStr, dStr] = String(fecha).split('-');
+    const [hhStr = '00', mmStr = '00'] = String(hora).split(':');
+    const y = parseInt(yStr, 10);
+    const m = parseInt(mStr, 10) - 1; // 0-based
+    const d = parseInt(dStr, 10);
+    const hh = parseInt(hhStr, 10) || 0;
+    const mm = parseInt(mmStr, 10) || 0;
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+    const local = new Date(y, m, d, hh, mm, 0, 0);
+    // Devolvemos ISO en UTC. El backend puede usar 'timezone' si lo requiere.
+    return local.toISOString();
   } catch {
     return null;
   }
@@ -65,4 +71,3 @@ export function normalizeTurno(raw) {
   };
   return normalized;
 }
-
