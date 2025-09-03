@@ -23,6 +23,7 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
     const timeFormatted = date.toLocaleTimeString('es-AR', {
       hour: '2-digit',
       minute: '2-digit',
+      hour12: false,
     });
     return { date: dateFormatted, time: timeFormatted };
   };

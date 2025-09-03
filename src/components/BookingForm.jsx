@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Calendar, Clock, User, CreditCard, Phone, AlertCircle, CheckCircle, Loader } from 'lucide-react';
 import { N8N_ENDPOINTS } from '../config/n8n';
 import { APPOINTMENT_TYPES, WORK_DAYS } from '../config/appointments';
-import { combineDateTimeToISO } from '../utils/appointments';
+import { combineDateTimeToISO, to24h } from '../utils/appointments';
 
 const LOCAL_APPOINTMENT_TYPES = [
   { id: 'consulta', name: 'Consulta', duration: 30 },
@@ -109,7 +109,9 @@ export default function BookingForm({ onSuccess }) {
         `${N8N_ENDPOINTS.GET_AVAILABILITY}?fecha=${fecha}&duration=${appointmentType.duration}`
       );
       const data = await response.json();
-      setAvailableSlots(data.availableSlots || []);
+      const raw = Array.isArray(data?.availableSlots) ? data.availableSlots : [];
+      const normalized = Array.from(new Set(raw.map(to24h))).sort();
+      setAvailableSlots(normalized);
     } catch (err) {
       console.error('Error getting availability:', err);
       setAvailableSlots([]);
