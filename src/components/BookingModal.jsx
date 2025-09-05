@@ -40,9 +40,10 @@ export default function BookingModal({ open, onClose, onSuccess }) {
           {/* Close button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-10 p-2"
+            className="absolute top-4 right-4 z-10 p-2 text-gray-900 hover:text-gray-700"
+            aria-label="Cerrar"
           >
-            <X size={20} className="text-white hover:text-gray-200" />
+            <X size={20} />
           </button>
           
           {/* BookingForm content (scrollable) */}
