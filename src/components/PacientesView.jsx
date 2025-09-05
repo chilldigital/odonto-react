@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { norm } from '../utils/helpers';
 import SearchInput from './SearchInput';
 import PatientTable from './PatientTable';
 
@@ -14,9 +15,9 @@ export default function PacientesView({
 }) {
   const collator = useMemo(() => new Intl.Collator('es', { sensitivity: 'base' }), []);
   const filteredPacientes = useMemo(() => {
-    const term = (searchTerm || '').toLowerCase();
+    const term = norm(searchTerm || '');
     return patients
-      .filter((p) => (p?.nombre || '').toLowerCase().includes(term))
+      .filter((p) => norm(p?.nombre || '').includes(term))
       .slice()
       .sort((a, b) => collator.compare(a?.nombre || '', b?.nombre || ''));
   }, [searchTerm, patients, collator]);

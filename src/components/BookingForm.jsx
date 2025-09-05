@@ -311,7 +311,7 @@ export default function BookingForm({ onSuccess, hideHeader = false, hideInterna
   return (
     <div className="bg-white">
       {!hideHeader && (
-        <div className="sticky top-0 z-[1] bg-white/80 backdrop-blur border-b px-6 py-4">
+        <div className="sticky top-0 z-[1] bg-white/80 backdrop-blur border-b px-6 min-h-[75px] flex items-center">
           <h1 className="text-xl font-semibold text-gray-900">Agendar Turno</h1>
         </div>
       )}

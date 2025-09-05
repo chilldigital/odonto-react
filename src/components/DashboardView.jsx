@@ -5,6 +5,7 @@ import StatsCard from './StatsCard';
 import SearchInput from './SearchInput';
 import PatientTable from './PatientTable';
 import { Link } from 'react-router-dom';
+import { norm } from '../utils/helpers';
 
 export default function DashboardView({ 
   dashboardSearchTerm, 
@@ -72,7 +73,7 @@ export default function DashboardView({
   }, [events]);
 
   const filteredPacientes = useMemo(() => {
-    const term = (dashboardSearchTerm || '').trim().toLowerCase();
+    const term = norm((dashboardSearchTerm || '').trim());
 
     function toTs(raw) {
       if (!raw) return 0;
@@ -120,8 +121,8 @@ export default function DashboardView({
 
     return base
       .filter((p) => {
-        const name = (p && p.nombre) ? p.nombre : '';
-        return name.toLowerCase().indexOf(term) !== -1;
+        const name = (p && p.nombre) ? norm(p.nombre) : '';
+        return name.indexOf(term) !== -1;
       })
       .sort((a, b) => ts(b) - ts(a))
       .slice(0, 4);

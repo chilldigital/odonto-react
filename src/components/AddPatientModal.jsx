@@ -138,10 +138,10 @@ export default function AddPatientModal({ open: openFlag, onClose, onCreate, onC
       
       {/* Modal */}
       <div className="relative z-10 flex h-full items-center justify-center py-6 md:py-10 px-4">
-        <div className="relative bg-white w-full max-w-lg rounded-2xl shadow-2xl border flex flex-col max-h-[calc(100vh-3rem)] md:max-h-[calc(100vh-5rem)] min-h-0 overflow-hidden">
+        <div className="relative bg-white w-full max-w-lg rounded-2xl shadow-2xl border flex flex-col max-h-[90vh] md:max-h-[calc(100vh-5rem)] min-h-0 overflow-hidden">
           
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b bg-white/80 backdrop-blur">
+          <div className="flex items-center justify-between px-6 py-4 border-b bg-white/80 backdrop-blur min-h-[75px]">
             <h3 className="text-xl font-semibold text-gray-900">Nuevo Paciente</h3>
             <button
               onClick={onClose}
