@@ -228,7 +228,7 @@ export default function DashboardView({
             )}
             
             {!turnosLoading && !turnosError && turnos.length === 0 && (
-              <div className="text-center py-6 text-gray-500">
+              <div className="text-center py-6 text-gray-600">
                 <Calendar size={32} className="mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No hay turnos programados para los próximos días</p>
                 <button

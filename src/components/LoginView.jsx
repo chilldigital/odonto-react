@@ -143,7 +143,18 @@ export default function LoginView({ onSuccess }) {
         .brand-ring:focus { outline: none !important; box-shadow: 0 0 0 2px #0C9488 !important; }
       `}</style>
 
-      <div className="min-h-screen bg-gray-50 grid lg:grid-cols-2">
+      <div className="relative min-h-screen grid lg:grid-cols-2">
+        {/* Fondo para mobile: misma imagen con overlay negro */}
+        <div
+          className="lg:hidden absolute inset-0 z-0"
+          style={{
+            backgroundImage: `url(${fondoLogin})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
+          <div className="absolute inset-0 bg-black/50" />
+        </div>
         {/* Panel ilustración */}
         <div
           className="hidden lg:flex relative flex-col justify-between p-10 text-white"
@@ -166,7 +177,7 @@ export default function LoginView({ onSuccess }) {
         </div>
 
         {/* Panel de login */}
-        <div className="flex items-center justify-center p-8">
+        <div className="relative z-10 flex items-center justify-center p-8">
           <div className="w-full max-w-md bg-white border rounded-2xl shadow-sm p-8">
             <h1 className="text-3xl font-semibold text-gray-900">Login</h1>
             <p className="text-gray-500 mt-2">Accedé a tu sistema odontológico.</p>
