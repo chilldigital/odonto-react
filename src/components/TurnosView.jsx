@@ -192,10 +192,17 @@ export default function TurnosView({ onOpenBooking, onViewTurno }) {
           {!loading && !error && grouped.length === 0 && (
             <div className="text-center py-12 text-gray-500">
               <Calendar size={48} className="mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No hay turnos programados</h3>
-              <p className="text-sm mb-4">
-                No se encontraron turnos para el período seleccionado ({dateFrom} al {dateTo}).
-              </p>
+              {dateFrom === dateTo && dateFrom === formatDateForInput(new Date()) ? (
+                <>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No hay turnos en el día de hoy</h3>
+                  <p className="text-sm mb-4">No se registran turnos para la fecha seleccionada.</p>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No hay turnos programados</h3>
+                  <p className="text-sm mb-4">No se encontraron turnos para el período seleccionado ({dateFrom} al {dateTo}).</p>
+                </>
+              )}
               <div className="flex flex-col sm:flex-row gap-2 items-center justify-center">
                 <button
                   onClick={onOpenBooking}

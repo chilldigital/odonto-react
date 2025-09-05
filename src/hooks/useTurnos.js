@@ -51,7 +51,18 @@ export function useTurnos(fromDate = null, toDate = null) {
 
       const response = await fetch(url);
       if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
+        // Algunos backends devuelven 400 cuando no hay eventos
+        if (response.status === 400) {
+          setTurnos([]);
+          setError('');
+          return;
+        }
+        let detail = '';
+        try {
+          const errJson = await response.json();
+          detail = errJson?.message || '';
+        } catch {}
+        throw new Error(`Error ${response.status}: ${detail || response.statusText}`);
       }
 
       const data = await response.json();
