@@ -134,45 +134,44 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={onClose} />
       <div className="flex min-h-full items-center justify-center p-4 overflow-hidden">
-        <div className="relative bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="relative bg-white rounded-2xl shadow-2xl border max-w-2xl w-full max-h-[90vh] overflow-y-auto overflow-x-hidden">
           {/* Header */}
-          <div className="sticky top-0 z-[1] bg-gray-50 p-6 text-black relative">
+          <div className="sticky top-0 z-[1] bg-white/80 backdrop-blur border-b px-6 min-h-[120px] py-10 flex items-center relative">
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-black/5 transition-colors"
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 text-gray-900 transition-colors"
             >
               <X size={20} />
             </button>
 
             <div className="pr-12">
-              <h2 className="text-2xl font-bold mb-2">Detalles del Turno</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Detalles del Turno</h2>
               {/* Info en una sola línea */}
-              <div className="flex items-center gap-6 text-black whitespace-nowrap min-w-0 text-sm">
-                <div className="flex items-center gap-2 min-w-0">
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-gray-700 min-w-0 text-sm">
+                <div className="flex items-center gap-2 min-w-0 max-w-full bg-[#F5F5F5] rounded-full px-3 py-1">
                   <Calendar size={14} />
                   <span className="capitalize truncate">{date}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 bg-[#F5F5F5] rounded-full px-3 py-1">
                   <Clock size={14} />
                   <span>{time} hs</span>
                 </div>
                 {duration && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 bg-[#F5F5F5] rounded-full px-3 py-1">
                     <span>({duration})</span>
                   </div>
                 )}
               </div>
             </div>
           </div>
-
           <div className="p-6">
             {/* Información Principal */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               {/* Paciente */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Información del Paciente</h3>
+                <h3 className="text-base font-semibold text-gray-800 border-b pb-2">Información del Paciente</h3>
 
                 {patientLoading && (
                   <div className="flex items-start gap-3 text-gray-500 text-sm">
@@ -191,7 +190,7 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
                 <div className="flex items-start gap-3">
                   <User className="text-gray-400 mt-1" size={16} />
                   <div>
-                    <p className="text-sm font-bold text-gray-900">
+                    <p className="text-sm font-medium text-gray-900">
                       {display.name || 'Sin nombre'}
                     </p>
                     <p className="text-sm text-gray-500">Paciente</p>
@@ -202,7 +201,7 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
                   <div className="flex items-start gap-3">
                     <Phone className="text-gray-400 mt-1" size={16} />
                     <div>
-                      <p className="font-medium text-gray-900">{display.phone}</p>
+                      <p className="text-sm font-medium text-gray-900">{display.phone}</p>
                       <p className="text-sm text-gray-500">Teléfono</p>
                     </div>
                   </div>
@@ -212,7 +211,7 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
                   <div className="flex items-start gap-3">
                     <CreditCard className="text-gray-400 mt-1" size={16} />
                     <div>
-                      <p className="font-medium text-gray-900">{display.dni}</p>
+                      <p className="text-sm font-medium text-gray-900">{display.dni}</p>
                       <p className="text-sm text-gray-500">DNI</p>
                     </div>
                   </div>
@@ -221,7 +220,7 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
 
               {/* Turno */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Información del Turno</h3>
+                <h3 className="text-base font-semibold text-gray-800 border-b pb-2">Información del Turno</h3>
 
                 <div className="flex items-start gap-3">
                   <Calendar className="text-gray-400 mt-1" size={16} />
@@ -262,8 +261,8 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
             {/* Descripción/Notas */}
             {turno.description && (
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Notas</h3>
-                <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-base font-semibold text-gray-800 border-b pb-2 mb-4">Notas</h3>
+                <div className="bg-[#F5F5F5] rounded-xl p-4">
                   <div className="flex items-start gap-3">
                     <FileText className="text-gray-400 mt-1" size={16} />
                     <p className="text-sm text-gray-700 leading-relaxed">{turno.description}</p>
@@ -275,24 +274,24 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
             {/* Información Médica */}
             {(turno.alergias || turno.antecedentes || turno.obraSocial) && (
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Información Médica</h3>
+                <h3 className="text-base font-semibold text-gray-800 border-b pb-2 mb-4">Información Médica</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {turno.alergias && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                      <p className="font-medium text-red-900 text-sm">Alergias</p>
-                      <p className="text-red-700">{turno.alergias}</p>
+                    <div className="bg-[#F5F5F5] rounded-xl p-3">
+                      <p className="text-sm font-medium text-gray-800">Alergias</p>
+                      <p className="text-sm text-gray-700">{turno.alergias}</p>
                     </div>
                   )}
                   {turno.antecedentes && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                      <p className="font-medium text-yellow-900 text-sm">Antecedentes</p>
-                      <p className="text-yellow-700">{turno.antecedentes}</p>
+                    <div className="bg-[#F5F5F5] rounded-xl p-3">
+                      <p className="text-sm font-medium text-gray-800">Antecedentes</p>
+                      <p className="text-sm text-gray-700">{turno.antecedentes}</p>
                     </div>
                   )}
                   {turno.obraSocial && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 md:col-span-2">
-                      <p className="font-medium text-blue-900 text-sm">Obra Social</p>
-                      <p className="text-blue-700">
+                    <div className="bg-[#F5F5F5] rounded-xl p-3 md:col-span-2">
+                      <p className="text-sm font-medium text-gray-800">Obra Social</p>
+                      <p className="text-sm text-gray-700">
                         {turno.obraSocial}
                         {turno.numeroAfiliado && ` - N° ${turno.numeroAfiliado}`}
                       </p>
@@ -306,14 +305,14 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
             <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
               <button
                 onClick={() => setShowConfirm(true)}
-                className="flex-1 inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+                className="flex-1 inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl transition-colors"
               >
                 <Trash2 size={16} />
                 Cancelar
               </button>
               <button
                 onClick={() => onEdit && onEdit(turno)}
-                className="flex-1 inline-flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg transition-colors"
+                className="flex-1 inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl transition-colors"
               >
                 <Edit size={16} />
                 Editar Turno
