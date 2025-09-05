@@ -486,7 +486,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
                 <button
                   type="submit"
                   disabled={!isFormValid() || loading || deleting}
-                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-3 px-6 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-3 px-6 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {loading ? 'Guardando...' : 'Guardar Cambios'}
                 </button>

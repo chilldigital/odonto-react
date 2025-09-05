@@ -1,10 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { X, User, Hash, Phone, Building2, FileText, AlertTriangle, Activity, Stethoscope } from 'lucide-react';
+import { X, User, Hash, Phone, Building2, FileText, AlertTriangle, Activity, Stethoscope, Paperclip } from 'lucide-react';
 
 const todayISO = () => new Date().toISOString();
 
 export default function AddPatientModal({ open: openFlag, onClose, onCreate, onCreated }) {
   const submittingRef = useRef(false);
+  const fileInputRef = useRef(null);
+  const attachBtnRef = useRef(null);
   
   const [form, setForm] = useState({
     nombre: '',
@@ -47,6 +49,16 @@ export default function AddPatientModal({ open: openFlag, onClose, onCreate, onC
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     setHistoriaClinicaFile(file || null);
+    // Devolver el foco a un elemento visible y estable
+    try { attachBtnRef.current?.focus({ preventScroll: true }); } catch {}
+  };
+
+  const handleClearFile = () => {
+    try {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch {}
+    setHistoriaClinicaFile(null);
+    try { attachBtnRef.current?.focus({ preventScroll: true }); } catch {}
   };
 
   const submit = async () => {
@@ -120,28 +132,29 @@ export default function AddPatientModal({ open: openFlag, onClose, onCreate, onC
     <div className="fixed inset-0 z-50">
       {/* Overlay */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={submitting ? undefined : onClose}
       />
       
       {/* Modal */}
       <div className="relative z-10 flex h-full items-center justify-center py-6 md:py-10 px-4">
-        <div className="relative bg-white w-full max-w-md rounded-2xl shadow-xl border flex flex-col max-h-[calc(100vh-3rem)] md:max-h-[calc(100vh-5rem)] min-h-0 overflow-hidden">
+        <div className="relative bg-white w-full max-w-lg rounded-2xl shadow-2xl border flex flex-col max-h-[calc(100vh-3rem)] md:max-h-[calc(100vh-5rem)] min-h-0 overflow-hidden">
           
           {/* Header */}
-          <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b">
-            <h3 className="text-lg font-semibold text-gray-900">Nuevo Paciente</h3>
+          <div className="flex items-center justify-between px-6 py-4 border-b bg-white/80 backdrop-blur">
+            <h3 className="text-xl font-semibold text-gray-900">Nuevo Paciente</h3>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+              className="p-2 rounded-full hover:bg-gray-100 text-gray-500"
               disabled={submitting}
+              aria-label="Cerrar"
             >
               <X size={18} />
             </button>
           </div>
 
           {/* Body */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-4">
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6 space-y-6">
             
             {/* 1. Nombre */}
             <div>
@@ -155,7 +168,7 @@ export default function AddPatientModal({ open: openFlag, onClose, onCreate, onC
                 onChange={handleChange}
                 type="text"
                 placeholder="Nombre completo del paciente"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full rounded-xl border border-transparent bg-[#F5F5F5] px-3 py-2 placeholder:text-sm text-sm focus:outline-none focus:ring-0 focus:shadow-none focus:border-transparent"
                 disabled={submitting}
                 required
               />
@@ -173,7 +186,7 @@ export default function AddPatientModal({ open: openFlag, onClose, onCreate, onC
                 onChange={handleChange}
                 type="text"
                 placeholder="Número de documento"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full rounded-xl border border-transparent bg-[#F5F5F5] px-3 py-2 placeholder:text-sm text-sm focus:outline-none focus:ring-0 focus:shadow-none focus:border-transparent"
                 disabled={submitting}
               />
             </div>
@@ -190,7 +203,7 @@ export default function AddPatientModal({ open: openFlag, onClose, onCreate, onC
                 onChange={handleChange}
                 type="tel"
                 placeholder="+54 11 5555-5555"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full rounded-xl border border-transparent bg-[#F5F5F5] px-3 py-2 placeholder:text-sm text-sm focus:outline-none focus:ring-0 focus:shadow-none focus:border-transparent"
                 disabled={submitting}
               />
             </div>
@@ -207,7 +220,7 @@ export default function AddPatientModal({ open: openFlag, onClose, onCreate, onC
                 onChange={handleChange}
                 type="text"
                 placeholder="OSDE, Swiss Medical, etc."
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full rounded-xl border border-transparent bg-[#F5F5F5] px-3 py-2 placeholder:text-sm text-sm focus:outline-none focus:ring-0 focus:shadow-none focus:border-transparent"
                 disabled={submitting}
               />
             </div>
@@ -224,7 +237,7 @@ export default function AddPatientModal({ open: openFlag, onClose, onCreate, onC
                 onChange={handleChange}
                 type="text"
                 placeholder="1234-5678-90"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full rounded-xl border border-transparent bg-[#F5F5F5] px-3 py-2 placeholder:text-sm text-sm focus:outline-none focus:ring-0 focus:shadow-none focus:border-transparent"
                 disabled={submitting}
               />
             </div>
@@ -241,7 +254,7 @@ export default function AddPatientModal({ open: openFlag, onClose, onCreate, onC
                 onChange={handleChange}
                 type="text"
                 placeholder="Ninguna / Penicilina, Polen..."
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full rounded-xl border border-transparent bg-[#F5F5F5] placeholder:text-sm text-sm px-3 py-2 shadow-sm focus:outline-none focus:ring-0 focus:shadow-none focus:border-transparent"
                 disabled={submitting}
               />
             </div>
@@ -258,29 +271,51 @@ export default function AddPatientModal({ open: openFlag, onClose, onCreate, onC
                 onChange={handleChange}
                 rows={2}
                 placeholder="Antecedentes médicos relevantes..."
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                className="w-full rounded-xl border border-transparent bg-[#F5F5F5] text-sm px-3 py-2 resize-none placeholder:text-sm focus:outline-none focus:ring-0 focus:shadow-none focus:border-transparent"
                 disabled={submitting}
               />
             </div>
 
             {/* 8. Historia Clínica (Archivo) */}
             <div>
-              <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+              <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
                 <FileText size={16} className="mr-2 text-gray-500" />
                 Historia Clínica (archivo)
               </label>
-              <input
-                type="file"
-                accept=".pdf,image/*"
-                onChange={handleFileChange}
-                className="w-full text-sm text-gray-700 file:mr-3 file:rounded-md file:border file:border-gray-200 file:bg-gray-50 file:px-3 file:py-1.5 file:text-sm file:text-gray-700 file:cursor-pointer cursor-pointer"
-                disabled={submitting}
-              />
-              {historiaClinicaFile && (
-                <span className="mt-1 text-xs text-gray-500">
-                  Archivo: {historiaClinicaFile.name}
+              <div className="flex items-center">
+                <button
+                  type="button"
+                  ref={attachBtnRef}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-sm inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#F1F6F5] text-black shadow-sm hover:bg-gray-200 select-none"
+                >
+                  <Paperclip size={16} />
+                  Adjuntar
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,image/*"
+                  onChange={handleFileChange}
+                  onFocus={(e) => { try { e.target.blur(); } catch {} }}
+                  className="hidden"
+                  disabled={submitting}
+                />
+                <span className="ml-3 text-sm text-gray-600 truncate max-w-[12rem] sm:max-w-[16rem] md:max-w-[20rem]">
+                  {historiaClinicaFile ? historiaClinicaFile.name : 'Sin archivos seleccionados'}
                 </span>
-              )}
+                {historiaClinicaFile && (
+                  <button
+                    type="button"
+                    onClick={handleClearFile}
+                    className="ml-2 inline-flex items-center gap-1 text-xs text-gray-500 hover:text-red-600"
+                    aria-label="Quitar archivo"
+                  >
+                    <X size={14} />
+                    Quitar
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* 9. Estado */}
@@ -293,7 +328,7 @@ export default function AddPatientModal({ open: openFlag, onClose, onCreate, onC
                 name="estado"
                 value={form.estado}
                 onChange={handleChange}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="text-sm w-full rounded-xl border border-transparent bg-[#F5F5F5] px-3 py-2 focus:outline-none focus:ring-0 focus:shadow-none focus:border-transparent"
                 disabled={submitting}
               >
                 <option value="Activo">Activo</option>
@@ -315,18 +350,18 @@ export default function AddPatientModal({ open: openFlag, onClose, onCreate, onC
                 onChange={handleChange}
                 rows={3}
                 placeholder="Observaciones adicionales..."
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                className="w-full rounded-xl border border-transparent bg-[#F5F5F5] text-sm px-3 py-2 placeholder:text-sm focus:outline-none focus:ring-0 focus:shadow-none focus:border-transparent resize-none"
                 disabled={submitting}
               />
             </div>
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t bg-white">
+          <div className="px-6 py-4 border-t bg-white/80 backdrop-blur sticky bottom-0">
             <div className="flex gap-3">
               <button
                 onClick={onClose}
-                className="flex-1 px-4 py-2 rounded-lg border text-gray-700 hover:bg-gray-50"
+                className="flex-1 px-4 py-2 rounded-xl border text-gray-700 hover:bg-gray-50"
                 disabled={submitting}
               >
                 Cancelar
@@ -334,7 +369,7 @@ export default function AddPatientModal({ open: openFlag, onClose, onCreate, onC
               <button
                 onClick={submit}
                 disabled={submitting || !form.nombre?.trim()}
-                className="flex-1 px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {submitting ? 'Creando...' : 'Crear'}
               </button>

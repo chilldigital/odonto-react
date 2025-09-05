@@ -85,7 +85,7 @@ export default function AppRoutes({ normalizedPatients = [], loading = false, re
       />
       <Route
         path="/turnos"
-        element={<TurnosView onOpenBooking={openBookingModal} />}
+        element={<TurnosView onOpenBooking={openBookingModal} onViewTurno={onViewTurno} />}
       />
       <Route
         path="/pacientes"
@@ -106,4 +106,3 @@ export default function AppRoutes({ normalizedPatients = [], loading = false, re
     </Routes>
   );
 }
-

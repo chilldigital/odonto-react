@@ -1,6 +1,7 @@
 // src/components/LoginView.jsx - VERSIÓN PRODUCCIÓN
 import React, { useState, useEffect } from "react";
 import { Shield, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
+import fondoLogin from "../imagenes/fondo-login-dentista.jpg";
 
 export default function LoginView({ onSuccess }) {
   const [credentials, setCredentials] = useState({ username: "", password: "" });
@@ -144,13 +145,21 @@ export default function LoginView({ onSuccess }) {
 
       <div className="min-h-screen bg-gray-50 grid lg:grid-cols-2">
         {/* Panel ilustración */}
-        <div className="hidden lg:flex flex-col justify-between p-10 brand-bg text-white">
-          <div />
-          <div>
-            <div className="text-3xl font-bold leading-tight">¡Bienvenida a tu consultorio digital!</div>
+        <div
+          className="hidden lg:flex relative flex-col justify-between p-10 text-white"
+          style={{
+            backgroundImage: `url(${fondoLogin})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        >
+          <div className="absolute inset-0 bg-black/50" aria-hidden="true"></div>
+          <div className="relative z-10" />
+          <div className="relative z-10">
+            <div className="text-3xl font-bold leading-tight">¡Bienvenida a tu consultorio digital! 🦷</div>
             <p className="mt-3 text-white/80">Accedé a tus pacientes y turnos desde un solo lugar.</p>
           </div>
-          <div className="flex items-center gap-2 opacity-90">
+          <div className="relative z-10 flex items-center gap-2 opacity-90">
             <Shield size={16} />
             <span className="text-sm">Datos protegidos con inicio seguro</span>
           </div>
@@ -313,4 +322,3 @@ export default function LoginView({ onSuccess }) {
     </>
   );
 }
-

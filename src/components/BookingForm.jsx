@@ -21,7 +21,7 @@ const LOCAL_APPOINTMENT_TYPES = [
 
 const LOCAL_WORK_DAYS = [1, 2, 3, 4]; // Lunes a Jueves
 
-export default function BookingForm({ onSuccess }) {
+export default function BookingForm({ onSuccess, hideHeader = false, hideInternalSubmit = false, setFormSubmit }) {
   // Form state
   const [formData, setFormData] = useState({
     dni: '',
@@ -44,6 +44,25 @@ export default function BookingForm({ onSuccess }) {
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+
+  // Exponer submit del form al contenedor para el botón del footer del modal
+  const formRef = React.useRef(null);
+  const hiddenSubmitRef = React.useRef(null);
+  React.useEffect(() => {
+    if (typeof setFormSubmit === 'function') {
+      setFormSubmit(() => () => {
+        try {
+          if (formRef.current?.requestSubmit) {
+            formRef.current.requestSubmit(hiddenSubmitRef.current || undefined);
+          } else {
+            hiddenSubmitRef.current?.click();
+          }
+        } catch {
+          try { hiddenSubmitRef.current?.click(); } catch {}
+        }
+      });
+    }
+  }, [setFormSubmit]);
 
   // Check patient by DNI
   const checkPatient = async (dni) => {
@@ -287,16 +306,19 @@ export default function BookingForm({ onSuccess }) {
     );
   }
 
+  // (sin hooks aquí para mantener el orden entre renders)
+
   return (
     <div className="bg-white">
-      {/* Header */}
-      <div className="sticky top-0 z-[1] bg-teal-600 p-6 text-white text-center shadow-sm">
-        <h1 className="text-3xl font-bold mb-2">Agendar Turno</h1>
-        <p className="text-teal-100">Completá los datos para reservar tu cita</p>
-      </div>
+      {!hideHeader && (
+        <div className="sticky top-0 z-[1] bg-white/80 backdrop-blur border-b px-6 py-4">
+          <h1 className="text-xl font-semibold text-gray-900">Agendar Turno</h1>
+        </div>
+      )}
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+      <form ref={formRef} onSubmit={handleSubmit} className="p-6 space-y-6">
+        <button ref={hiddenSubmitRef} type="submit" className="hidden" aria-hidden="true" tabIndex={-1} />
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
             <AlertCircle size={20} />
@@ -316,7 +338,7 @@ export default function BookingForm({ onSuccess }) {
               value={formData.dni}
               onChange={(e) => handleInputChange('dni', e.target.value)}
               placeholder="12.345.678"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className="text-sm w-full px-3 py-2 rounded-xl border border-transparent bg-[#F5F5F5] placeholder:text-sm focus:outline-none focus:ring-0 focus:border-transparent"
               required
             />
             {checkingPatient && (
@@ -324,9 +346,9 @@ export default function BookingForm({ onSuccess }) {
             )}
           </div>
           {patientFound && (
-            <p className="text-green-600 text-sm mt-1 flex items-center gap-1">
+            <p className="text-teal-600 text-sm mt-1 flex items-center gap-1">
               <CheckCircle size={16} />
-              Paciente encontrado - datos completados automáticamente
+              ¡Paciente encontrado!
             </p>
           )}
         </div>
@@ -343,7 +365,7 @@ export default function BookingForm({ onSuccess }) {
               value={formData.nombre}
               onChange={(e) => handleInputChange('nombre', e.target.value)}
               placeholder="Juan Pérez"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className="text-sm w-full px-3 py-2 rounded-xl border border-transparent bg-[#F5F5F5] placeholder:text-sm focus:outline-none focus:ring-0 focus:border-transparent"
               required
             />
           </div>
@@ -358,7 +380,7 @@ export default function BookingForm({ onSuccess }) {
               value={formData.telefono}
               onChange={(e) => handleInputChange('telefono', e.target.value)}
               placeholder="+54 381 123 4567"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className="text-sm w-full px-3 py-2 rounded-xl border border-transparent bg-[#F5F5F5] placeholder:text-sm focus:outline-none focus:ring-0 focus:border-transparent"
               required
             />
           </div>
@@ -375,7 +397,7 @@ export default function BookingForm({ onSuccess }) {
               value={formData.obraSocial}
               onChange={(e) => handleInputChange('obraSocial', e.target.value)}
               placeholder="OSDE, Swiss Medical, etc."
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className="text-sm w-full px-3 py-2 rounded-xl border border-transparent bg-[#F5F5F5] placeholder:text-sm focus:outline-none focus:ring-0 focus:border-transparent"
             />
           </div>
           
@@ -388,7 +410,7 @@ export default function BookingForm({ onSuccess }) {
               value={formData.numeroAfiliado}
               onChange={(e) => handleInputChange('numeroAfiliado', e.target.value)}
               placeholder="123456789"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className="text-sm w-full px-3 py-2 rounded-xl border border-transparent bg-[#F5F5F5] placeholder:text-sm focus:outline-none focus:ring-0 focus:border-transparent"
             />
           </div>
         </div>
@@ -404,7 +426,7 @@ export default function BookingForm({ onSuccess }) {
               value={formData.alergias}
               onChange={(e) => handleInputChange('alergias', e.target.value)}
               placeholder="Ninguna, Penicilina, etc."
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className="text-sm w-full px-3 py-2 rounded-xl border border-transparent bg-[#F5F5F5] placeholder:text-sm focus:outline-none focus:ring-0 focus:border-transparent"
             />
           </div>
           
@@ -417,7 +439,7 @@ export default function BookingForm({ onSuccess }) {
               value={formData.antecedentes}
               onChange={(e) => handleInputChange('antecedentes', e.target.value)}
               placeholder="Diabetes, Hipertensión, etc."
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className="text-sm w-full px-3 py-2 rounded-xl border border-transparent bg-[#F5F5F5] placeholder:text-sm focus:outline-none focus:ring-0 focus:border-transparent"
             />
           </div>
         </div>
@@ -431,7 +453,7 @@ export default function BookingForm({ onSuccess }) {
           <select
             value={formData.tipoTurno}
             onChange={(e) => handleInputChange('tipoTurno', e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            className="text-sm w-full px-3 py-2 rounded-xl border border-transparent bg-[#F5F5F5] focus:outline-none focus:ring-0 focus:border-transparent text-sm"
             required
           >
             <option value="">Selecciona el tipo de consulta</option>
@@ -452,7 +474,7 @@ export default function BookingForm({ onSuccess }) {
           <select
             value={formData.fecha}
             onChange={(e) => handleInputChange('fecha', e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            className="text-sm w-full px-3 py-2 rounded-xl border border-transparent bg-[#F5F5F5] focus:outline-none focus:ring-0 focus:border-transparent text-sm"
             required
           >
             <option value="">Selecciona una fecha</option>
@@ -483,7 +505,7 @@ export default function BookingForm({ onSuccess }) {
                     key={slot}
                     type="button"
                     onClick={() => handleInputChange('hora', slot)}
-                    className={`p-3 text-sm rounded-lg border transition-colors ${
+                    className={`p-3 text-sm rounded-lg border transition-colors focus:outline-none ${
                       formData.hora === slot
                         ? 'bg-teal-600 text-white border-teal-600'
                         : 'bg-white text-gray-700 border-gray-300 hover:border-teal-500'
@@ -502,26 +524,29 @@ export default function BookingForm({ onSuccess }) {
           </div>
         )}
 
-        {/* Submit Button */}
-        <div className="pt-4">
-          <button
-            type="submit"
-            disabled={!isFormValid() || loading}
-            className="w-full bg-teal-600 text-white py-3 px-6 rounded-lg font-medium text-lg hover:from-teal-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <Loader className="w-5 h-5 animate-spin" />
-                Creando Turno...
-              </>
-            ) : (
-              <>
-                <Calendar className="w-5 h-5" />
-                Confirmar Turno
-              </>
-            )}
-          </button>
-        </div>
+        {!hideInternalSubmit && (
+          <div className="px-0">
+            <div className="mt-2 -mx-6 px-6 py-4 border-t bg-white/80 backdrop-blur">
+              <button
+                type="submit"
+                disabled={!isFormValid() || loading}
+                className="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 px-6 rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    Creando Turno...
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="w-5 h-5" />
+                    Confirmar Turno
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
       </form>
     </div>
   );
