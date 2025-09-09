@@ -7,6 +7,7 @@ import TurnosView from '../components/TurnosView';
 
 import { useModals } from '../hooks/useModals';
 import { URL_DELETE_PATIENT } from '../config/n8n';
+import { apiFetch } from '../utils/api';
 
 export default function AppRoutes({ normalizedPatients = [], loading = false, refreshPatients }) {
   const navigate = useNavigate();
@@ -47,7 +48,7 @@ export default function AppRoutes({ normalizedPatients = [], loading = false, re
 
       setLocallyDeleted(prev => [...prev, id]);
 
-      const response = await fetch(URL_DELETE_PATIENT, {
+      const response = await apiFetch(URL_DELETE_PATIENT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, airtableId: id, nombre, timestamp: new Date().toISOString() }),

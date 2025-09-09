@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { X, Calendar, Clock, User, Phone, CreditCard, MapPin, FileText, Edit, Trash2, Loader, AlertCircle } from 'lucide-react';
 import { N8N_ENDPOINTS } from '../config/n8n';
+import { apiFetch } from '../utils/api';
 
 export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDelete }) {
   if (!open || !turno) return null;
@@ -87,7 +88,7 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
       setPatientLoading(true);
       setPatientError('');
       try {
-        const resp = await fetch(`${N8N_ENDPOINTS.CHECK_PATIENT}?dni=${encodeURIComponent(dni)}`);
+        const resp = await apiFetch(`${N8N_ENDPOINTS.CHECK_PATIENT}?dni=${encodeURIComponent(dni)}`);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
         if (!aborted) {
