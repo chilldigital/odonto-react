@@ -97,6 +97,8 @@ export const secureApiCall = async (url, options = {}) => {
   }
 
   const headers = getAuthHeaders(options.headers);
+  const apiKey = process.env.REACT_APP_API_KEY;
+  if (apiKey) headers['X-API-Key'] = apiKey;
 
   try {
     const response = await fetch(url, {

@@ -3,6 +3,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { URL_CALENDAR_EVENTS } from '../config/n8n';
+import { apiFetch } from '../utils/api';
 import { normalizeTurno } from '../utils/appointments';
 
 export function useTurnos(fromDate = null, toDate = null) {
@@ -49,7 +50,7 @@ export function useTurnos(fromDate = null, toDate = null) {
       const timeZone = 'America/Argentina/Buenos_Aires';
       const url = `${URL_CALENDAR_EVENTS}?from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}&timeZone=${encodeURIComponent(timeZone)}`;
 
-      const response = await fetch(url);
+      const response = await apiFetch(url);
       if (!response.ok) {
         // Algunos backends devuelven 400 cuando no hay eventos
         if (response.status === 400) {

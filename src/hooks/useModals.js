@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useCallback, useMemo, useState } from 'react';
 import { N8N_ENDPOINTS } from '../config/n8n';
+import { apiFetch } from '../utils/api';
 
 const ModalsContext = createContext(null);
 
@@ -117,7 +118,7 @@ export function ModalsProvider({ children, addPatient, updatePatient, refreshTur
       return;
     }
     try {
-      const response = await fetch(N8N_ENDPOINTS.DELETE_APPOINTMENT, {
+      const response = await apiFetch(N8N_ENDPOINTS.DELETE_APPOINTMENT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

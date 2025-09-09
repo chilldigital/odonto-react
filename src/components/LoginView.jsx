@@ -37,7 +37,7 @@ export default function LoginView({ onSuccess }) {
     try {
       const response = await fetch(`${n8nBaseUrl}/webhook/auth-login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(process.env.REACT_APP_API_KEY ? { 'X-API-Key': process.env.REACT_APP_API_KEY } : {}) },
         body: JSON.stringify({
           username: credentials.username.trim(),
           password: credentials.password,
@@ -110,7 +110,7 @@ export default function LoginView({ onSuccess }) {
     try {
       const res = await fetch(`${n8nBaseUrl}/webhook/forgot-password`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(process.env.REACT_APP_API_KEY ? { 'X-API-Key': process.env.REACT_APP_API_KEY } : {}) },
         body: JSON.stringify({ email, timestamp: new Date().toISOString() }),
       });
       const data = await res.json();

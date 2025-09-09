@@ -14,6 +14,7 @@ import { useNormalizedPatients } from '../hooks/useNormalizedPatients';
 
 import { checkTokenExpiry, getTokenInfo } from '../utils/auth';
 import { URL_DELETE_PATIENT } from '../config/n8n';
+import { apiFetch } from '../utils/api';
 
 const titleByPath = (pathname) => {
   if (pathname.startsWith('/pacientes')) return 'Pacientes';
@@ -83,7 +84,7 @@ export default function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
         const nombre = patient?.nombre || patient?.name || 'Paciente';
         if (!id) throw new Error('No se pudo identificar el paciente');
 
-        const response = await fetch(URL_DELETE_PATIENT, {
+        const response = await apiFetch(URL_DELETE_PATIENT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id, airtableId: id, nombre, timestamp: new Date().toISOString() }),

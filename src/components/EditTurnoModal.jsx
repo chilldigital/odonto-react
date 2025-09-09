@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Calendar, Clock, User, CreditCard, Phone, AlertCircle, CheckCircle, Loader } from 'lucide-react';
 import { N8N_ENDPOINTS } from '../config/n8n';
+import { apiFetch } from '../utils/api';
 import { APPOINTMENT_TYPES, WORK_DAYS } from '../config/appointments';
 import { combineDateTimeToISO, to24h } from '../utils/appointments';
 
@@ -106,7 +107,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
     setCheckingPatient(true);
     setError('');
     try {
-      const response = await fetch(`${N8N_ENDPOINTS.CHECK_PATIENT}?dni=${dni}`);
+      const response = await apiFetch(`${N8N_ENDPOINTS.CHECK_PATIENT}?dni=${dni}`);
       if (!response.ok) throw new Error('Error al consultar paciente');
       const data = await response.json();
       if (data.found && data.patient) {
@@ -137,7 +138,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
     setLoadingAvailability(true);
     try {
       const appointmentType = APPOINTMENT_TYPES.find(t => t.id === tipoTurno);
-      const response = await fetch(`${N8N_ENDPOINTS.GET_AVAILABILITY}?fecha=${fecha}&duration=${appointmentType?.duration || 30}&excludeId=${formData.id}`);
+      const response = await apiFetch(`${N8N_ENDPOINTS.GET_AVAILABILITY}?fecha=${fecha}&duration=${appointmentType?.duration || 30}&excludeId=${formData.id}`);
       const data = await response.json();
       const raw = Array.isArray(data?.availableSlots) ? data.availableSlots : [];
       // Normalizar a 24h, quitar duplicados y ordenar
@@ -188,7 +189,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
     try {
       const appointmentType = APPOINTMENT_TYPES.find(t => t.id === formData.tipoTurno);
       const appointmentISO = combineDateTimeToISO(formData.fecha, formData.hora, 'America/Argentina/Buenos_Aires');
-      const response = await fetch(N8N_ENDPOINTS.UPDATE_APPOINTMENT, {
+      const response = await apiFetch(N8N_ENDPOINTS.UPDATE_APPOINTMENT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -228,7 +229,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
     setDeleting(true);
     setError('');
     try {
-      const response = await fetch(N8N_ENDPOINTS.DELETE_APPOINTMENT, {
+      const response = await apiFetch(N8N_ENDPOINTS.DELETE_APPOINTMENT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -1,4 +1,5 @@
 import { URL_GET_PATIENTS, URL_CREATE_PATIENT, URL_UPDATE_PATIENT } from '../config/n8n.js';
+import { apiFetch } from '../utils/api';
 
 /**
  * Servicio para gestionar pacientes desde n8n/Airtable
@@ -13,7 +14,7 @@ export class PatientService {
     try {
       
       
-      const response = await fetch(URL_GET_PATIENTS, {
+      const response = await apiFetch(URL_GET_PATIENTS, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -96,7 +97,7 @@ export class PatientService {
       }
 
       // *** ÚNICA LLAMADA A N8N ***
-      const response = await fetch(URL_CREATE_PATIENT, requestOptions);
+      const response = await apiFetch(URL_CREATE_PATIENT, requestOptions);
 
       if (!response.ok) {
         throw new Error(`Error ${response.status}: ${response.statusText}`);
@@ -180,7 +181,7 @@ export class PatientService {
       };
     }
 
-    const response = await fetch(URL_UPDATE_PATIENT, requestOptions);
+    const response = await apiFetch(URL_UPDATE_PATIENT, requestOptions);
 
     if (!response.ok) {
       throw new Error(`Error ${response.status}: ${response.statusText}`);
