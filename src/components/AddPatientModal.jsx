@@ -118,7 +118,6 @@ export default function AddPatientModal({ open: openFlag, onClose, onCreate, onC
 
       resetForm();
     } catch (err) {
-      console.error('❌ [AddPatientModal] Error al crear paciente:', err);
       alert(`Error: ${err.message || 'No se pudo crear el paciente'}`);
     } finally {
       submittingRef.current = false;

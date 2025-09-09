@@ -104,7 +104,6 @@ export default function ChangePasswordModal({ open, onClose, user }) {
         setError(data.message || 'Error al actualizar la contraseña');
       }
     } catch (err) {
-      console.error('Error changing password:', err);
       setError('Error de conexión. Intenta nuevamente.');
     } finally {
       setLoading(false);

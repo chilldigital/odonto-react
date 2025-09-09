@@ -80,7 +80,7 @@
             const startTime = Date.now();
 
             try {
-                console.log('📤 Enviando request:', { username, url: `${n8nUrl}/webhook/auth-login` });
+                
 
                 const response = await fetch(`${n8nUrl}/webhook/auth-login`, {
                     method: 'POST',
@@ -97,7 +97,7 @@
                 const responseTime = Date.now() - startTime;
                 const data = await response.json();
 
-                console.log('📥 Response:', data);
+                
 
                 let resultHtml = `
                     <div class="result ${data.success ? 'success' : 'error'}">
@@ -127,7 +127,7 @@
                 resultsDiv.innerHTML = resultHtml;
 
             } catch (error) {
-                console.error('💥 Error:', error);
+                
                 
                 resultsDiv.innerHTML = `
                     <div class="result error">

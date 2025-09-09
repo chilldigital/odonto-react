@@ -109,7 +109,6 @@ export default function BookingForm({ onSuccess, hideHeader = false, hideInterna
         setPatientFound(false);
       }
     } catch (err) {
-      console.error('Error checking patient:', err);
       setError('Error al verificar el paciente. Intenta nuevamente.');
       setPatientFound(false);
     } finally {
@@ -132,7 +131,6 @@ export default function BookingForm({ onSuccess, hideHeader = false, hideInterna
       const normalized = Array.from(new Set(raw.map(to24h))).sort();
       setAvailableSlots(normalized);
     } catch (err) {
-      console.error('Error getting availability:', err);
       setAvailableSlots([]);
     } finally {
       setLoadingAvailability(false);
@@ -240,7 +238,6 @@ export default function BookingForm({ onSuccess, hideHeader = false, hideInterna
       }, 2000);
     } catch (err) {
       setError(err.message || 'Error al crear el turno. Intenta nuevamente.');
-      console.error('Error creating appointment:', err);
     } finally {
       setLoading(false);
     }

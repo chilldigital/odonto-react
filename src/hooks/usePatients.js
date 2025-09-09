@@ -55,7 +55,6 @@ export function usePatients() {
       setPatients(normalized);
     } catch (err) {
       setError(err.message);
-      console.error('Error cargando pacientes:', err);
     } finally {
       setLoading(false);
     }
