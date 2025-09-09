@@ -11,7 +11,7 @@ export class PatientService {
    */
   static async fetchAllPatients() {
     try {
-      console.log('📥 Obteniendo pacientes desde N8N...');
+      
       
       const response = await fetch(URL_GET_PATIENTS, {
         method: 'GET',
@@ -28,11 +28,11 @@ export class PatientService {
       
       // El webhook debería devolver: { patients: [...] }
       const patients = data.patients || [];
-      console.log(`✅ ${patients.length} pacientes obtenidos`);
+      
       
       return patients;
     } catch (error) {
-      console.error('❌ Error al obtener pacientes:', error);
+      
       throw error;
     }
   }
@@ -45,17 +45,14 @@ export class PatientService {
    */
   static async createPatient(patientData) {
     try {
-      console.log('📤 Creando paciente en N8N...', {
-        name: patientData.nombre,
-        hasFile: !!patientData.historiaClinicaFile
-      });
+      
 
       let requestOptions;
 
       // *** LÓGICA CONDICIONAL: ARCHIVO vs JSON ***
       if (patientData.historiaClinicaFile) {
         // Si hay archivo, usar FormData
-        console.log('📁 Usando FormData para archivo:', patientData.fileName);
+        
         
         const formData = new FormData();
         formData.append('nombre', patientData.nombre || '');
@@ -77,7 +74,7 @@ export class PatientService {
 
       } else {
         // Sin archivo, usar JSON normal
-        console.log('📄 Usando JSON (sin archivo)');
+        
         
         requestOptions = {
           method: 'POST',
@@ -106,7 +103,7 @@ export class PatientService {
       }
 
       const responseData = await response.json();
-      console.log('✅ N8N respondió:', responseData);
+      
 
       // Normalizar la respuesta de N8N
       const normalizedPatient = {
@@ -127,17 +124,10 @@ export class PatientService {
         fileName: patientData.fileName,
       };
 
-      console.log('✅ Paciente creado exitosamente:', normalizedPatient.nombre);
+      
       return normalizedPatient;
 
     } catch (error) {
-      console.error('❌ Error al crear paciente:', error);
-      console.error('📊 Datos enviados:', {
-        url: URL_CREATE_PATIENT,
-        hasFile: !!patientData.historiaClinicaFile,
-        fileName: patientData.fileName,
-        patientName: patientData.nombre
-      });
       throw error;
     }
   }
@@ -150,17 +140,14 @@ export class PatientService {
  */
   static async updatePatient(patientData) {
   try {
-    console.log('📝 Actualizando paciente:', patientData.nombre, {
-      hasFile: !!patientData.historiaClinicaFile,
-      airtableId: patientData.airtableId
-    });
+  
 
     let requestOptions;
 
     // *** LÓGICA CONDICIONAL: ARCHIVO vs JSON ***
     if (patientData.historiaClinicaFile) {
       // Si hay archivo, usar FormData
-      console.log('📁 Usando FormData para archivo:', patientData.historiaClinicaFile.name);
+      
       
       const formData = new FormData();
       formData.append('airtableId', patientData.airtableId);
@@ -182,7 +169,7 @@ export class PatientService {
       };
     } else {
       // Sin archivo, usar JSON normal
-      console.log('📄 Usando JSON (sin archivo)');
+      
       
       requestOptions = {
         method: 'POST',
@@ -208,16 +195,10 @@ export class PatientService {
       ...(result.data || {}),
     };
 
-    console.log('✅ Paciente actualizado exitosamente:', updatedPatient.nombre);
+    
     return updatedPatient;
 
   } catch (error) {
-    console.error('❌ Error al actualizar paciente:', error);
-    console.error('📊 Datos enviados:', {
-      airtableId: patientData.airtableId,
-      hasFile: !!patientData.historiaClinicaFile,
-      fileName: patientData.historiaClinicaFile?.name,
-    });
     throw error;
   }
   }

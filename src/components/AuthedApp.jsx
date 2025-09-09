@@ -53,8 +53,8 @@ export default function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
   // Debug: Mostrar info del token en desarrollo
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      const tokenInfo = getTokenInfo();
-      console.log('Token Info:', tokenInfo);
+      // Debug deshabilitado: evitar logs en consola
+      void getTokenInfo();
     }
   }, []);
 
@@ -92,7 +92,6 @@ export default function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
 
         await refreshPatients();
       } catch (err) {
-        console.error('Error eliminando paciente:', err);
         throw err;
       }
     },

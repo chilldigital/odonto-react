@@ -139,7 +139,6 @@ export function ModalsProvider({ children, addPatient, updatePatient, refreshTur
       }
       onTurnoDeleted({ ...turno, id });
     } catch (err) {
-      console.error('Error cancelando turno:', err);
       alert(err.message || 'No se pudo cancelar el turno.');
     }
   }, [onTurnoDeleted]);
@@ -152,7 +151,6 @@ export function ModalsProvider({ children, addPatient, updatePatient, refreshTur
       setShowEditModal(false);
       setSelectedPatient(null);
     } catch (err) {
-      console.error('Error actualizando paciente:', err);
       alert(`Error: ${err.message || 'No se pudo actualizar el paciente'}`);
     }
   }, [updatePatient]);
@@ -170,7 +168,6 @@ export function ModalsProvider({ children, addPatient, updatePatient, refreshTur
       const created = (Array.isArray(res) ? res[0]?.patient : res?.patient) || res || createdFallback;
       return created;
     } catch (err) {
-      console.error('Error creating patient:', err);
       alert(`Error: ${err.message || 'No se pudo crear el paciente'}`);
       throw err;
     }

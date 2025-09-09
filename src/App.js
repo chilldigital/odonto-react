@@ -17,7 +17,6 @@ export default function App() {
       setAuthed(true);
       setJustLoggedIn(true);
     } catch (e) {
-      console.error('Error guardando auth:', e);
       setAuthed(true);
       setJustLoggedIn(true);
     }
@@ -35,8 +34,7 @@ export default function App() {
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('App State:', { authed, justLoggedIn });
-      console.log('Token Info:', getTokenInfo());
+      // Debug deshabilitado: evitar logs en consola
     }
   }, [authed, justLoggedIn]);
 

@@ -124,7 +124,6 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
         setPatientFound(false);
       }
     } catch (err) {
-      console.error('Error checking patient:', err);
       setError('Error al verificar el paciente. Intenta nuevamente.');
       setPatientFound(false);
     } finally {
@@ -145,7 +144,6 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
       const unique = Array.from(new Set(raw.map(to24h))).sort();
       setAvailableSlots(unique);
     } catch (err) {
-      console.error('Error getting availability:', err);
       setAvailableSlots([]);
     } finally {
       setLoadingAvailability(false);
@@ -221,7 +219,6 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
       onClose();
     } catch (err) {
       setError(err.message || 'Error al actualizar el turno. Intenta nuevamente.');
-      console.error('Error updating appointment:', err);
     } finally {
       setLoading(false);
     }
@@ -251,7 +248,6 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
       onClose();
     } catch (err) {
       setError(err.message || 'Error al cancelar el turno. Intenta nuevamente.');
-      console.error('Error deleting appointment:', err);
     } finally {
       setDeleting(false);
     }

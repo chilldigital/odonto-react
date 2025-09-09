@@ -78,7 +78,6 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
       setDeleting(false);
       onClose?.();
     } catch (e) {
-      console.error('Error eliminando paciente:', e);
       setDeleting(false);
       alert(`Error al eliminar: ${e.message || 'Intente nuevamente'}`);
     }

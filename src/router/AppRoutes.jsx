@@ -57,7 +57,6 @@ export default function AppRoutes({ normalizedPatients = [], loading = false, re
       await refreshPatients?.();
       setLocallyDeleted(prev => prev.filter(k => k !== id));
     } catch (err) {
-      console.error('Error eliminando paciente:', err);
       const id = typeof patientData === 'string' ? patientData : (patientData?.id || patientData?.airtableId);
       if (id) setLocallyDeleted(prev => prev.filter(k => k !== id));
       throw err;
