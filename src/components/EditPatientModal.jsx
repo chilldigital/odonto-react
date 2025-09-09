@@ -10,6 +10,7 @@ export default function EditPatientModal({ open, patient, onClose, onSaved }) {
     nombre: '',
     dni: '',
     telefono: '',
+    email: '',
     obraSocial: '',
     numeroAfiliado: '',
     alergia: '',
@@ -40,6 +41,7 @@ export default function EditPatientModal({ open, patient, onClose, onSaved }) {
         nombre: patient?.nombre || '',
         dni: patient?.dni || '',
         telefono: patient?.telefono || '',
+        email: patient?.email || '',
         obraSocial: patient?.obraSocial || '',
         numeroAfiliado: patient?.numeroAfiliado || '',
         alergia: patient?.alergia || patient?.alergias || '',
@@ -174,6 +176,23 @@ export default function EditPatientModal({ open, patient, onClose, onSaved }) {
               onChange={handleChange}
               type="tel"
               placeholder="+54 11 5555-5555"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              disabled={saving}
+            />
+          </div>
+
+          {/* 3b. Email */}
+          <div>
+            <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
+              <User size={16} className="mr-2 text-gray-500" />
+              Email
+            </label>
+            <input
+              name="email"
+              value={form.email}
+              onChange={handleChange}
+              type="email"
+              placeholder="paciente@correo.com"
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               disabled={saving}
             />

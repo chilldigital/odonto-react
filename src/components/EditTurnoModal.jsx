@@ -11,6 +11,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
     dni: '',
     nombre: '',
     telefono: '',
+    email: '',
     obraSocial: '',
     numeroAfiliado: '',
     alergias: '',
@@ -76,6 +77,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
         dni: dniInicial,
         nombre: turno.patientName || turno.paciente || nombreDesdeDescripcion || '',
         telefono: turno.patientPhone || turno.telefono || '',
+        email: turno.patientEmail || turno.email || '',
         obraSocial: turno.obraSocial || '',
         numeroAfiliado: turno.numeroAfiliado || '',
         alergias: turno.alergias || '',
@@ -115,6 +117,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
           ...prev,
           nombre: data.patient.nombre || data.patient.name || prev.nombre,
           telefono: data.patient.telefono || data.patient.phone || prev.telefono,
+          email: data.patient.email || prev.email,
           obraSocial: data.patient.obraSocial || data.patient.insurance || prev.obraSocial,
           numeroAfiliado: data.patient.numeroAfiliado || data.patient.affiliateNumber || prev.numeroAfiliado,
           alergias: data.patient.alergias || data.patient.allergies || prev.alergias || 'Ninguna',
@@ -197,6 +200,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
           dni: formData.dni,
           nombre: formData.nombre,
           telefono: formData.telefono,
+          email: formData.email,
           obraSocial: formData.obraSocial,
           numeroAfiliado: formData.numeroAfiliado,
           alergias: formData.alergias || 'Ninguna',
@@ -338,11 +342,23 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
                     readOnly
                     className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed text-gray-700"
                   />
-                </div>
               </div>
+            </div>
 
-              {/* Obra Social */}
-              <div className="hidden">
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+                placeholder="paciente@correo.com"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Obra Social */}
+            <div className="hidden">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Obra Social</label>
                   <input
