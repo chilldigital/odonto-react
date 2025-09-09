@@ -28,6 +28,7 @@ export default function BookingForm({ onSuccess, hideHeader = false, hideInterna
     dni: '',
     nombre: '',
     telefono: '',
+    email: '',
     obraSocial: '',
     numeroAfiliado: '',
     alergias: '',
@@ -90,6 +91,7 @@ export default function BookingForm({ onSuccess, hideHeader = false, hideInterna
           ...prev,
           nombre: data.patient.nombre || data.patient.name || '',
           telefono: data.patient.telefono || data.patient.phone || '',
+          email: data.patient.email || '',
           obraSocial: data.patient.obraSocial || data.patient.insurance || '',
           numeroAfiliado: data.patient.numeroAfiliado || data.patient.affiliateNumber || '',
           alergias: data.patient.alergias || data.patient.allergies || 'Ninguna',
@@ -102,6 +104,7 @@ export default function BookingForm({ onSuccess, hideHeader = false, hideInterna
           ...prev,
           nombre: '',
           telefono: '',
+          email: '',
           obraSocial: '',
           numeroAfiliado: '',
           alergias: '',
@@ -210,6 +213,7 @@ export default function BookingForm({ onSuccess, hideHeader = false, hideInterna
           dni: formData.dni,
           nombre: formData.nombre,
           telefono: formData.telefono,
+          email: formData.email,
           obraSocial: formData.obraSocial,
           numeroAfiliado: formData.numeroAfiliado,
           alergias: formData.alergias || 'Ninguna',
@@ -256,6 +260,7 @@ export default function BookingForm({ onSuccess, hideHeader = false, hideInterna
       dni: '',
       nombre: '',
       telefono: '',
+      email: '',
       obraSocial: '',
       numeroAfiliado: '',
       alergias: '',
@@ -382,6 +387,20 @@ export default function BookingForm({ onSuccess, hideHeader = false, hideInterna
               required
             />
           </div>
+        </div>
+
+        {/* Email */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Email
+          </label>
+          <input
+            type="email"
+            value={formData.email}
+            onChange={(e) => handleInputChange('email', e.target.value)}
+            placeholder="paciente@correo.com"
+            className="text-sm w-full px-3 py-2 rounded-xl border border-transparent bg-[#F5F5F5] placeholder:text-sm focus:outline-none focus:ring-0 focus:border-transparent"
+          />
         </div>
 
         {/* Insurance Info */}

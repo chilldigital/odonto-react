@@ -46,6 +46,7 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
   const nombre = getField(patient, ['nombre', 'name'], 'Sin nombre');
   const dni = getField(patient, ['dni', 'DNI', 'Dni']);
   const telefono = getField(patient, ['telefono', 'phone', 'Telefono']);
+  const email = getField(patient, ['email', 'Email', 'correo', 'mail'], '-');
   const obraSocial = getField(patient, ['obraSocial', 'obra_social', 'ObraSocial', 'Obra Social']);
   const numeroAfiliado = getField(patient, ['numeroAfiliado', 'Numero Afiliado', 'Número Afiliado', 'numero_afiliado']);
   const alergia = getField(patient, ['alergia', 'alergias', 'Alergias', 'allergies'], 'Ninguna');
@@ -217,6 +218,13 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
             icon={Phone} 
             label="Teléfono" 
             value={telefono} 
+          />
+
+          {/* 3b. Email */}
+          <InfoRow 
+            icon={FileText} 
+            label="Email" 
+            value={email} 
           />
 
           {/* 4. Obra Social */}

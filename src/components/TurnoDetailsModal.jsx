@@ -124,12 +124,12 @@ export default function TurnoDetailsModal({ open, turno, onClose, onEdit, onDele
           nameFromDescription
       ),
       phone: safe(patient?.telefono || patient?.phone || turno.patientPhone),
+      email: safe(patient?.email || turno.patientEmail || turno.email),
       dni: safe(dni),
       obraSocial: safe(patient?.obraSocial || patient?.insurance || turno.obraSocial),
       numeroAfiliado: safe(patient?.numeroAfiliado || patient?.affiliateNumber || turno.numeroAfiliado),
       alergias: safe(patient?.alergias || patient?.allergies || turno.alergias),
       antecedentes: safe(patient?.antecedentes || patient?.background || turno.antecedentes),
-      email: safe(patient?.email),
     };
   }, [patient, turno, dni, nameFromDescription]);
 
