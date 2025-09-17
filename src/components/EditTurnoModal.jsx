@@ -1,11 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Calendar, Clock, User, CreditCard, Phone, AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { Calendar, Clock, User, CreditCard, Phone, AlertCircle, CheckCircle, Loader, X } from 'lucide-react';
 import { N8N_ENDPOINTS } from '../config/n8n';
 import { apiFetch } from '../utils/api';
+import './loader-spin.css';
 import { APPOINTMENT_TYPES, WORK_DAYS } from '../config/appointments';
 import { combineDateTimeToISO, to24h } from '../utils/appointments';
 
-export default function EditTurnoModal({ open, turno, onClose, onSaved, onDeleted }) {
+// ...existing code...
+
+export default function EditTurnoModal({ open, turno, onClose, onSaved, onDeleted, onBack }) {
   const [formData, setFormData] = useState({
     id: '',
     dni: '',
@@ -268,24 +271,36 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
-      <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={onClose} />
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={onClose} />
+      <div className="flex min-h-full items-center justify-center p-4 overflow-hidden">
+        <div className="relative bg-white rounded-2xl shadow-2xl border max-w-2xl w-full max-h-[90vh] overflow-y-auto overflow-x-hidden flex flex-col">
           {/* Header */}
-          <div className="sticky top-0 z-[1] bg-teal-600 p-6 text-white relative">
-            <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors">
+          <div className="sticky top-0 z-[1] bg-white/80 backdrop-blur border-b px-6 min-h-[75px] flex items-center relative">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-gray-100 text-gray-900 transition-colors"
+                aria-label="Volver"
+              >
+                <ArrowLeft size={20} />
+              </button>
+            )}
+            <div className="flex-1 flex items-center justify-start">
+              <h2 className="text-xl font-semibold text-gray-900">Editar Turno</h2>
+            </div>
+            <button
+              onClick={onClose}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-gray-100 text-gray-900 transition-colors"
+              aria-label="Cerrar"
+            >
               <X size={20} />
             </button>
-            <div className="pr-12">
-              <h2 className="text-2xl font-bold mb-2">Editar Turno</h2>
-              <p className="text-white-100">Modificá los detalles del turno existente</p>
-            </div>
           </div>
 
           {/* Body */}
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
-            <form onSubmit={handleSave} className="p-6 space-y-6">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] bg-white">
+            <form id="edit-turno-form" onSubmit={handleSave} className="p-6 space-y-6 pb-8">
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
                   <AlertCircle size={20} />
@@ -303,14 +318,14 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
                     type="text"
                     value={formData.dni}
                     readOnly
-                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed text-gray-700"
+                    className="text-sm w-full px-3 py-2 rounded-xl border border-transparent bg-[#F5F5F5] text-gray-700 cursor-not-allowed"
                   />
                   {checkingPatient && (
-                    <Loader className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 animate-spin" />
+                    <Loader className="absolute right-3 top-2 w-5 h-5 text-gray-400 animate-spin" />
                   )}
                 </div>
                 {patientFound && (
-                  <p className="text-green-600 text-sm mt-1 flex items-center gap-1">
+                  <p className="text-teal-600 text-sm mt-1 flex items-center gap-1">
                     <CheckCircle size={16} /> Paciente encontrado - datos actualizados automáticamente
                   </p>
                 )}
@@ -328,7 +343,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
                     readOnly
                     onChange={(e) => handleInputChange('nombre', e.target.value)}
                     placeholder="Juan Pérez"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="text-sm w-full px-3 py-2 rounded-xl border border-transparent bg-[#F5F5F5] text-gray-700 cursor-not-allowed"
                     required
                   />
                 </div>
@@ -340,10 +355,10 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
                     type="tel"
                     value={formData.telefono}
                     readOnly
-                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed text-gray-700"
+                    className="text-sm w-full px-3 py-2 rounded-xl border border-transparent bg-[#F5F5F5] text-gray-700 cursor-not-allowed"
                   />
+                </div>
               </div>
-            </div>
 
             {/* Email */}
             <div>
@@ -353,7 +368,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 placeholder="paciente@correo.com"
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                className="text-sm w-full px-3 py-2 rounded-xl border border-transparent bg-[#F5F5F5] text-gray-700"
               />
             </div>
 
@@ -413,7 +428,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
                 <select
                   value={formData.tipoTurno}
                   onChange={(e) => handleInputChange('tipoTurno', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  className="text-sm w-full px-3 py-2 rounded-xl border border-transparent bg-[#F5F5F5] text-gray-700"
                   required
                 >
                   <option value="">Selecciona el tipo de consulta</option>
@@ -433,7 +448,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
                 <select
                   value={formData.fecha}
                   onChange={(e) => handleInputChange('fecha', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  className="text-sm w-full px-3 py-2 rounded-xl border border-transparent bg-[#F5F5F5] text-gray-700"
                   required
                 >
                   <option value="">Selecciona una fecha</option>
@@ -447,7 +462,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
               {formData.fecha && formData.tipoTurno && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Clock className="inline w-4 h-4 mr-1" /> Horario
+                    <Clock className="inline w-4 h-4 mr-1" /> Horario Disponible
                   </label>
                   {loadingAvailability ? (
                     <div className="flex items-center gap-2 p-3 text-gray-600">
@@ -460,16 +475,21 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
                           key={slot}
                           type="button"
                           onClick={() => handleInputChange('hora', slot)}
-                          className={`p-3 text-sm rounded-lg border transition-colors ${
+                          className={`p-3 text-sm rounded-lg border transition-colors focus:outline-none ${
                             formData.hora === slot
-                              ? 'bg-amber-600 text-white border-amber-600'
-                              : 'bg-white text-gray-700 border-gray-300 hover:border-amber-500'
+                              ? 'bg-teal-600 text-white border-teal-600'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-teal-500'
                           }`}
                         >
                           {slot} hs
                         </button>
                       ))}
                     </div>
+                  )}
+                  {!loadingAvailability && availableSlots.length === 0 && (
+                    <p className="text-gray-500 text-sm p-3 bg-gray-50 rounded-lg">
+                      No hay horarios disponibles para esta fecha y tipo de turno.
+                    </p>
                   )}
                 </div>
               )}
@@ -482,29 +502,41 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
                   onChange={(e) => handleInputChange('notas', e.target.value)}
                   rows={3}
                   placeholder="Información adicional sobre el turno..."
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  className="text-sm w-full px-3 py-2 rounded-xl border border-transparent bg-[#F5F5F5] text-gray-700"
                 />
               </div>
 
-              {/* Botones */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm(true)}
-                  disabled={deleting || loading}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-                >
-                  Cancelar Turno
-                </button>
-                <button
-                  type="submit"
-                  disabled={!isFormValid() || loading || deleting}
-                  className="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-3 px-6 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {loading ? 'Guardando...' : 'Guardar Cambios'}
-                </button>
-              </div>
+              {/* Botones: ahora sticky en el footer */}
             </form>
+          </div>
+          {/* Footer sticky con botones */}
+          <div className="sticky bottom-0 z-10 bg-white/95 backdrop-blur border-t px-6 py-4 flex flex-col sm:flex-row gap-3">
+            <button
+              type="button"
+              onClick={() => setShowConfirm(true)}
+              disabled={deleting || loading}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            >
+              Cancelar Turno
+            </button>
+            <button
+              type="submit"
+              form="edit-turno-form"
+              disabled={!isFormValid() || loading || deleting}
+              className="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-3 px-6 rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader className="w-5 h-5 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-5 h-5" />
+                  Guardar Cambios
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
