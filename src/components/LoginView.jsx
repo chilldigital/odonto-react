@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { Shield, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
 import fondoLogin from "../imagenes/fondo-login-dentista.jpg";
+import { apiFetch } from "../utils/api";
+import { N8N_BASE } from "../config/n8n";
 
 export default function LoginView({ onSuccess }) {
   const [credentials, setCredentials] = useState({ username: "", password: "" });
@@ -16,7 +18,7 @@ export default function LoginView({ onSuccess }) {
   const [fpLoading, setFpLoading] = useState(false);
   const [fpMsg, setFpMsg] = useState({ type: "", text: "" });
 
-  const n8nBaseUrl = process.env.REACT_APP_N8N_BASE || "https://n8n-automation.chilldigital.tech";
+  const n8nBaseUrl = N8N_BASE;
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -35,9 +37,8 @@ export default function LoginView({ onSuccess }) {
     setError("");
     setSuccess("");
     try {
-      const response = await fetch(`${n8nBaseUrl}/webhook/auth-login`, {
+      const response = await apiFetch(`${n8nBaseUrl}/webhook/auth-login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(process.env.REACT_APP_API_KEY ? { 'X-API-Key': process.env.REACT_APP_API_KEY } : {}) },
         body: JSON.stringify({
           username: credentials.username.trim(),
           password: credentials.password,
@@ -108,9 +109,8 @@ export default function LoginView({ onSuccess }) {
 
     setFpLoading(true);
     try {
-      const res = await fetch(`${n8nBaseUrl}/webhook/forgot-password`, {
+      const res = await apiFetch(`${n8nBaseUrl}/webhook/forgot-password`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(process.env.REACT_APP_API_KEY ? { 'X-API-Key': process.env.REACT_APP_API_KEY } : {}) },
         body: JSON.stringify({ email, timestamp: new Date().toISOString() }),
       });
       const data = await res.json();
