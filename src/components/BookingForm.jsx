@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Calendar, Clock, User, CreditCard, Phone, AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import './loader-spin.css';
 import { N8N_ENDPOINTS } from '../config/n8n';
 import { apiFetch } from '../utils/api';
 import { APPOINTMENT_TYPES, WORK_DAYS } from '../config/appointments';
@@ -345,7 +346,7 @@ export default function BookingForm({ onSuccess, hideHeader = false, hideInterna
               required
             />
             {checkingPatient && (
-              <Loader className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 animate-spin" />
+              <Loader className="absolute right-3 top-2 w-5 h-5 text-gray-400 spin-in-place" />
             )}
           </div>
           {patientFound && (
