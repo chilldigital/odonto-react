@@ -275,8 +275,8 @@ export default function LoginView({ onSuccess }) {
 
             {/* Footer info */}
             <div className="mt-8 pt-6 border-t border-gray-200 text-center">
-              <p className="text-xs text-gray-500">Sistema Odontológico Seguro</p>
-              <p className="text-xs text-gray-400 mt-1">Powered by ChillDigital</p>
+              <p className="text-xs text-gray-500">Dental Dash</p>
+              <p className="text-xs text-gray-400 mt-1">Powered by <a href="https://chilldigital.agency" target="_blank">ChillDigital</a></p>
             </div>
           </div>
         </div>

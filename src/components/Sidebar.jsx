@@ -114,7 +114,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, onLogout }) {
         {/* Footer */}
         <div className="p-4 border-t border-gray-200">
           <div className="text-center">
-            <p className="text-xs text-gray-500 mb-1">Sistema Odontológico</p>
+            <p className="text-xs text-gray-500 mb-1">Dental Dash</p>
             <p className="text-xs text-gray-400">v1.0.0</p>
           </div>
         </div>
