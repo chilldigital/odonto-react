@@ -18,7 +18,8 @@ export default function ModalsRoot({ patientsLoading = false, onDeletePatient })
     showAddModal,
     showRecordModal,
     closeProfile,
-    onEditFromProfile,
+  onEditFromProfile,
+  onViewPatient,
     onSavedPatient,
     onCreatedPatient,
 
@@ -58,6 +59,12 @@ export default function ModalsRoot({ patientsLoading = false, onDeletePatient })
         patient={selectedPatient}
         onClose={closeEditPatient}
         onSaved={onSavedPatient}
+        onBack={() => {
+          closeEditPatient();
+          if (selectedPatient) {
+            onViewPatient(selectedPatient);
+          }
+        }}
         loading={patientsLoading}
       />
 
@@ -94,6 +101,13 @@ export default function ModalsRoot({ patientsLoading = false, onDeletePatient })
         onClose={closeEditTurno}
         onSaved={onTurnoSaved}
         onDeleted={onTurnoDeleted}
+        onBack={() => {
+          closeEditTurno();
+          // Usar el método del hook para abrir el modal de detalles
+          if (selectedTurno) {
+            onViewTurno(selectedTurno);
+          }
+        }}
       />
     </>
   );
