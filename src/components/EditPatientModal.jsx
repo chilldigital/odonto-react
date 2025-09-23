@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import ModalShell from './ModalShell';
-import { User, Hash, Phone, Building2, FileText, AlertTriangle, Activity, Stethoscope, AlertCircle, Check, X } from 'lucide-react';
+import { User, Hash, Phone, Building2, FileText, AlertTriangle, Activity, Stethoscope, AlertCircle, Check, X, ArrowLeft } from 'lucide-react';
 import { cls } from '../utils/helpers';
 
-export default function EditPatientModal({ open, patient, onClose, onSaved }) {
+export default function EditPatientModal({ open, patient, onClose, onSaved, onBack }) {
   const savingRef = useRef(false);
 
   const [form, setForm] = useState({
@@ -119,12 +119,25 @@ export default function EditPatientModal({ open, patient, onClose, onSaved }) {
         <div className="relative bg-white w-full max-w-lg rounded-2xl shadow-2xl border flex flex-col max-h-[90vh] md:max-h-[calc(100vh-5rem)] min-h-0 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b bg-white/80 backdrop-blur min-h-[75px]">
-            <h3 className="text-xl font-semibold text-gray-900">Editar Paciente</h3>
+            <div className="flex items-center gap-2">
+              {onBack && (
+                <button
+                  onClick={onBack}
+                  className="mr-2 p-2 rounded-full hover:bg-gray-100 text-gray-900 transition-colors"
+                  aria-label="Volver"
+                  type="button"
+                >
+                  <ArrowLeft size={20} />
+                </button>
+              )}
+              <h3 className="text-xl font-semibold text-gray-900">Editar Paciente</h3>
+            </div>
             <button
               onClick={onClose}
               className="p-2 rounded-full hover:bg-gray-100 text-gray-500"
               disabled={saving}
               aria-label="Cerrar"
+              type="button"
             >
               <X size={18} />
             </button>
@@ -356,7 +369,7 @@ export default function EditPatientModal({ open, patient, onClose, onSaved }) {
               <button
                 onClick={save}
                 disabled={saving || !form.nombre?.trim()}
-                className="flex-1 px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 rounded-xl bg-teal-600 text-white hover:bg-teal-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {saving ? 'Guardando...' : 'Guardar'}
               </button>
