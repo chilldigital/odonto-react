@@ -94,6 +94,13 @@ export default function ModalsRoot({ patientsLoading = false, onDeletePatient })
         onClose={closeEditTurno}
         onSaved={onTurnoSaved}
         onDeleted={onTurnoDeleted}
+        onBack={() => {
+          closeEditTurno();
+          // Usar el método del hook para abrir el modal de detalles
+          if (selectedTurno) {
+            onViewTurno(selectedTurno);
+          }
+        }}
       />
     </>
   );

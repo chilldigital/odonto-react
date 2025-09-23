@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Calendar, Clock, User, CreditCard, Phone, AlertCircle, CheckCircle, Loader, X } from 'lucide-react';
+import { Calendar, Clock, User, CreditCard, Phone, AlertCircle, CheckCircle, Loader, X, ArrowLeft } from 'lucide-react';
 import { N8N_ENDPOINTS } from '../config/n8n';
 import { apiFetch } from '../utils/api';
 import './loader-spin.css';
@@ -277,16 +277,16 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
         <div className="relative bg-white rounded-2xl shadow-2xl border max-w-2xl w-full max-h-[90vh] overflow-y-auto overflow-x-hidden flex flex-col">
           {/* Header */}
           <div className="sticky top-0 z-[1] bg-white/80 backdrop-blur border-b px-6 min-h-[75px] flex items-center relative">
-            {onBack && (
-              <button
-                onClick={onBack}
-                className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-gray-100 text-gray-900 transition-colors"
-                aria-label="Volver"
-              >
-                <ArrowLeft size={20} />
-              </button>
-            )}
-            <div className="flex-1 flex items-center justify-start">
+            <div className="flex-1 flex items-center justify-start gap-1">
+              {onBack && (
+                <button
+                  onClick={onBack}
+                  className="mr-2 p-2 rounded-full hover:bg-gray-100 text-gray-900 transition-colors"
+                  aria-label="Volver"
+                >
+                  <ArrowLeft size={20} />
+                </button>
+              )}
               <h2 className="text-xl font-semibold text-gray-900">Editar Turno</h2>
             </div>
             <button
@@ -532,7 +532,6 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
                 </>
               ) : (
                 <>
-                  <CheckCircle className="w-5 h-5" />
                   Guardar Cambios
                 </>
               )}
