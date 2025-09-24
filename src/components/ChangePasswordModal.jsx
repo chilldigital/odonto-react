@@ -70,6 +70,13 @@ export default function ChangePasswordModal({ open, onClose, user }) {
       return;
     }
 
+    const userEmail = (user?.email || '').trim();
+
+    if (!userEmail) {
+      setError('No se encontro el email del usuario. Por favor vuelve a iniciar sesion.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     setSuccess('');
@@ -78,7 +85,7 @@ export default function ChangePasswordModal({ open, onClose, user }) {
       const response = await secureApiCall(`${n8nBaseUrl}/webhook/change-password`, {
         method: 'POST',
         body: JSON.stringify({
-          username: user?.username,
+          email: userEmail,
           currentPassword: passwords.currentPassword,
           newPassword: passwords.newPassword,
           timestamp: new Date().toISOString()
