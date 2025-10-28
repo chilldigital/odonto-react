@@ -36,9 +36,7 @@ export function useNormalizedPatients(patients) {
 
     return list
       .map((p) => ({
-        id: p?.id || p?.airtableId || p?.recordId || p?._id || String(Math.random()),
-        airtableId: p?.airtableId || p?.id || p?.recordId || p?._id,
-        recordId: p?.recordId || p?.id || p?.airtableId || p?._id,
+        id: p?.id || p?._id || String(Math.random()),
         nombre: getField(p, ['nombre', 'name'], 'Sin nombre'),
         dni: getField(p, ['dni', 'DNI', 'Dni']),
         telefono: getField(p, ['telefono', 'phone', 'Telefono']),

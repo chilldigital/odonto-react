@@ -84,7 +84,6 @@ export default function EditPatientModal({ open, patient, onClose, onSaved, onBa
       const updatedPatientData = {
         ...patient,
         ...form,
-        airtableId: patient.airtableId,
       };
 
       if (historiaClinicaFile) {

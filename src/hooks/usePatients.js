@@ -41,7 +41,7 @@ export function usePatients() {
   const [error, setError] = useState(null);
 
   /**
-   * Cargar todos los pacientes desde n8n/Airtable
+   * Cargar todos los pacientes desde n8n
    */
   const loadPatients = useCallback(async () => {
     setLoading(true);
@@ -96,7 +96,7 @@ export function usePatients() {
 
   /**
    * Actualizar un paciente existente
-   * @param {Object} patientData - Datos del paciente (debe incluir airtableId)
+   * @param {Object} patientData - Datos del paciente (usar id o dni)
    */
   const updatePatient = useCallback(async (patientData) => {
     setLoading(true);
@@ -106,13 +106,15 @@ export function usePatients() {
       const updatedRaw = await PatientService.updatePatient(patientData);
       const updatedPatient = (Array.isArray(updatedRaw) ? updatedRaw[0]?.patient : updatedRaw?.patient) || updatedRaw || {};
 
-      setPatients((prevPatients) =>
-        prevPatients.map((patient) =>
-          patient.airtableId === patientData.airtableId
+      setPatients((prevPatients) => {
+        const targetKey = patientData?.id || patientData?._id || patientData?.dni;
+        return prevPatients.map((patient) => {
+          const pKey = patient?.id || patient?._id || patient?.dni;
+          return targetKey && pKey === targetKey
             ? normalizePatient({ ...patient, ...updatedPatient })
-            : patient
-        )
-      );
+            : patient;
+        });
+      });
 
       return updatedPatient;
     } catch (err) {

@@ -73,21 +73,20 @@ export default function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
             ? normalizedPatients.find(
                 (p) =>
                   p?.id === patientData ||
-                  p?.airtableId === patientData ||
-                  p?.recordId === patientData
+                  p?._id === patientData ||
+                  p?.dni === patientData
               )
             : patientData;
 
         if (!patient) throw new Error('No se pudo encontrar el paciente');
 
-        const id = patient?.id || patient?.airtableId || patient?.recordId || patient?._id;
-        const nombre = patient?.nombre || patient?.name || 'Paciente';
-        if (!id) throw new Error('No se pudo identificar el paciente');
+        const dni = patient?.dni || '';
+        if (!dni) throw new Error('No se pudo identificar el paciente (falta DNI)');
 
         const response = await apiFetch(URL_DELETE_PATIENT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, airtableId: id, nombre, timestamp: new Date().toISOString() }),
+          body: JSON.stringify({ dni, timestamp: new Date().toISOString() }),
         });
         if (!response.ok) throw new Error(`Error del servidor: ${response.status}`);
 

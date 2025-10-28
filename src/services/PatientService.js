@@ -2,12 +2,12 @@ import { URL_GET_PATIENTS, URL_CREATE_PATIENT, URL_UPDATE_PATIENT } from '../con
 import { apiFetch } from '../utils/api';
 
 /**
- * Servicio para gestionar pacientes desde n8n/Airtable
+ * Servicio para gestionar pacientes desde n8n
  */
 export class PatientService {
   
   /**
-   * Obtener todos los pacientes desde n8n/Airtable
+   * Obtener todos los pacientes desde n8n
    * @returns {Promise<Array>} Lista de pacientes
    */
   static async fetchAllPatients() {
@@ -108,7 +108,7 @@ export class PatientService {
 
       // Normalizar la respuesta de N8N
       const normalizedPatient = {
-        id: responseData.id || responseData.recordId || responseData.ID || patientData.id,
+        id: responseData.id || responseData._id || patientData.id || patientData._id || patientData.dni,
         nombre: responseData.nombre || responseData.name || patientData.nombre,
         dni: responseData.dni || responseData.DNI || patientData.dni,
         telefono: responseData.telefono || responseData.phone || patientData.telefono,
@@ -136,7 +136,7 @@ export class PatientService {
   /**
  * Actualizar un paciente existente
  * *** MEJORADO: Ahora soporta archivos ***
- * @param {Object} patientData - Datos del paciente (debe incluir airtableId)
+ * @param {Object} patientData - Datos del paciente (usar id o dni)
  * @returns {Promise<Object>} Paciente actualizado
  */
   static async updatePatient(patientData) {
@@ -151,7 +151,9 @@ export class PatientService {
       
       
       const formData = new FormData();
-      formData.append('airtableId', patientData.airtableId);
+      // Identificador: usar DNI o id si existe
+      if (patientData.dni) formData.append('dni', patientData.dni);
+      else if (patientData.id || patientData._id) formData.append('id', patientData.id || patientData._id);
       
       // Agregar todos los campos del formulario
       Object.entries(patientData).forEach(([key, value]) => {

@@ -162,7 +162,7 @@ export function ModalsProvider({ children, addPatient, updatePatient, refreshTur
       setShowAddModal(false);
       const createdFallback = {
         ...patientData,
-        id: patientData?.id || patientData?.airtableId || patientData?.recordId || String(Date.now()),
+        id: patientData?.id || patientData?._id || patientData?.dni || String(Date.now()),
         fechaCreacion: patientData?.fechaCreacion || patientData?.fechaRegistro || new Date().toISOString().slice(0, 10),
         _createdAt: typeof patientData?._createdAt === 'number' ? patientData._createdAt : Date.now(),
       };

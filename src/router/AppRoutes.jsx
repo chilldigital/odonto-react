@@ -26,8 +26,8 @@ export default function AppRoutes({ normalizedPatients = [], loading = false, re
 
   const patientsForViews = useMemo(() => (
     (Array.isArray(normalizedPatients) ? normalizedPatients : []).filter(p => {
-      const id = p?.id || p?.airtableId || p?.recordId || p?._id;
-      return id && !locallyDeleted.includes(id);
+      const key = p?.id || p?._id || p?.dni;
+      return key && !locallyDeleted.includes(key);
     })
   ), [normalizedPatients, locallyDeleted]);
 
@@ -37,29 +37,29 @@ export default function AppRoutes({ normalizedPatients = [], loading = false, re
     try {
       const patient = typeof patientData === 'string' ?
         patientsForViews.find(p =>
-          p?.id === patientData || p?.airtableId === patientData || p?.recordId === patientData
+          p?.id === patientData || p?._id === patientData || p?.dni === patientData
         ) : patientData;
 
       if (!patient) throw new Error('No se pudo encontrar el paciente');
 
-      const id = patient?.id || patient?.airtableId || patient?.recordId || patient?._id;
-      const nombre = patient?.nombre || patient?.name || 'Paciente';
-      if (!id) throw new Error('No se pudo identificar el paciente');
+      const key = patient?.id || patient?._id || patient?.dni;
+      const dni = patient?.dni || '';
+      if (!dni) throw new Error('No se pudo identificar el paciente (falta DNI)');
 
-      setLocallyDeleted(prev => [...prev, id]);
+      if (key) setLocallyDeleted(prev => [...prev, key]);
 
       const response = await apiFetch(URL_DELETE_PATIENT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, airtableId: id, nombre, timestamp: new Date().toISOString() }),
+        body: JSON.stringify({ dni, timestamp: new Date().toISOString() }),
       });
       if (!response.ok) throw new Error(`Error del servidor: ${response.status}`);
 
       await refreshPatients?.();
-      setLocallyDeleted(prev => prev.filter(k => k !== id));
+      if (key) setLocallyDeleted(prev => prev.filter(k => k !== key));
     } catch (err) {
-      const id = typeof patientData === 'string' ? patientData : (patientData?.id || patientData?.airtableId);
-      if (id) setLocallyDeleted(prev => prev.filter(k => k !== id));
+      const key = typeof patientData === 'string' ? patientData : (patientData?.id || patientData?._id || patientData?.dni);
+      if (key) setLocallyDeleted(prev => prev.filter(k => k !== key));
       throw err;
     }
   }, [refreshPatients, patientsForViews]);
