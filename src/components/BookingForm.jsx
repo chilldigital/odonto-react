@@ -114,7 +114,7 @@ export default function BookingForm({ onSuccess, hideHeader = false, hideInterna
         setPatientFound(false);
       }
     } catch (err) {
-      setError('Error al verificar el paciente. Intenta nuevamente.');
+      setError('No se encontró el paciente.');
       setPatientFound(false);
     } finally {
       setCheckingPatient(false);
