@@ -59,7 +59,6 @@ export class PatientService {
         formData.append('email', patientData.email || '');
         formData.append('obraSocial', patientData.obraSocial || '');
         formData.append('numeroafiliado', patientData.numeroAfiliado || ''); // lowercase para N8N
-        formData.append('fechanacimiento', patientData.fechaNacimiento || ''); // lowercase para N8N
         formData.append('alergias', patientData.alergias || patientData.alergia || 'Ninguna');
         formData.append('antecedentes', patientData.antecedentes || 'Ninguno');
         formData.append('notas', patientData.notas || '');
@@ -87,7 +86,6 @@ export class PatientService {
             email: patientData.email || '',
             obraSocial: patientData.obraSocial || '',
             numeroAfiliado: patientData.numeroAfiliado || '',
-            fechaNacimiento: patientData.fechaNacimiento || '',
             alergias: patientData.alergias || patientData.alergia || 'Ninguna',
             antecedentes: patientData.antecedentes || 'Ninguno',
             notas: patientData.notas || '',
@@ -156,7 +154,7 @@ export class PatientService {
       
       // Agregar todos los campos del formulario
       Object.entries(patientData).forEach(([key, value]) => {
-        if (key !== 'historiaClinicaFile' && value != null) {
+        if (key !== 'historiaClinicaFile' && key !== 'fechaNacimiento' && value != null) {
           formData.append(key, String(value));
         }
       });
@@ -173,12 +171,15 @@ export class PatientService {
       // Sin archivo, usar JSON normal
       
       
+      const sanitized = { ...patientData };
+      delete sanitized.fechaNacimiento;
+
       requestOptions = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(patientData)
+        body: JSON.stringify(sanitized)
       };
     }
 
