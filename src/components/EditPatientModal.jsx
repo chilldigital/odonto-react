@@ -13,7 +13,7 @@ export default function EditPatientModal({ open, patient, onClose, onSaved, onBa
     email: '',
     obraSocial: '',
     numeroAfiliado: '',
-    alergia: '',
+    alergias: '',
     antecedentes: '',
     historiaClinica: '',
     estado: 'Activo',
@@ -44,7 +44,7 @@ export default function EditPatientModal({ open, patient, onClose, onSaved, onBa
         email: patient?.email || '',
         obraSocial: patient?.obraSocial || '',
         numeroAfiliado: patient?.numeroAfiliado || '',
-        alergia: patient?.alergia || patient?.alergias || '',
+        alergias: patient?.alergias || patient?.alergia || '',
         antecedentes: patient?.antecedentes || '',
         historiaClinica: patient?.historiaClinica || '',
         estado: patient?.estado || 'Activo',
@@ -259,15 +259,15 @@ export default function EditPatientModal({ open, patient, onClose, onSaved, onBa
               />
             </div>
 
-            {/* 6. Alergia */}
+            {/* 6. Alergias */}
             <div>
               <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
                 <AlertTriangle size={16} className="mr-2 text-gray-500" />
-                Alergia
+                Alergias
               </label>
               <input
-                name="alergia"
-                value={form.alergia}
+                name="alergias"
+                value={form.alergias}
                 onChange={handleChange}
                 type="text"
                 placeholder="Ninguna / Penicilina, Polen..."

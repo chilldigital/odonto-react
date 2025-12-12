@@ -15,7 +15,7 @@ export default function AddPatientModal({ open: openFlag, onClose, onCreate, onC
     email: '',
     obraSocial: '',
     numeroAfiliado: '',
-    alergia: '',
+    alergias: '',
     antecedentes: '',
     historiaClinica: '',
     estado: 'Activo', // Valor por defecto
@@ -33,7 +33,7 @@ export default function AddPatientModal({ open: openFlag, onClose, onCreate, onC
       email: '',
       obraSocial: '',
       numeroAfiliado: '',
-      alergia: '',
+      alergias: '',
       antecedentes: '',
       historiaClinica: '',
       estado: 'Activo',
@@ -260,15 +260,15 @@ export default function AddPatientModal({ open: openFlag, onClose, onCreate, onC
               />
             </div>
 
-            {/* 6. Alergia */}
+            {/* 6. Alergias */}
             <div>
               <label className="flex items-center text-sm font-medium text-gray-700 mb-1">
                 <AlertTriangle size={16} className="mr-2 text-gray-500" />
-                Alergia
+                Alergias
               </label>
               <input
-                name="alergia"
-                value={form.alergia}
+                name="alergias"
+                value={form.alergias}
                 onChange={handleChange}
                 type="text"
                 placeholder="Ninguna / Penicilina, Polen..."

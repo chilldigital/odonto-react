@@ -1,4 +1,5 @@
 // src/utils/auth.js - UTILIDADES DE AUTENTICACIÓN
+import React from 'react';
 
 // Obtener token del localStorage
 export const getAuthToken = () => {
@@ -261,4 +262,3 @@ export default {
   getTokenInfo,
   useAuth,
 };
-

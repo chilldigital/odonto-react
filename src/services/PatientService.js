@@ -16,9 +16,6 @@ export class PatientService {
       
       const response = await apiFetch(URL_GET_PATIENTS, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
       });
 
       if (!response.ok) {
@@ -63,7 +60,8 @@ export class PatientService {
         formData.append('obraSocial', patientData.obraSocial || '');
         formData.append('numeroafiliado', patientData.numeroAfiliado || ''); // lowercase para N8N
         formData.append('fechanacimiento', patientData.fechaNacimiento || ''); // lowercase para N8N
-        formData.append('alergias', patientData.alergias || 'Ninguna');
+        formData.append('alergias', patientData.alergias || patientData.alergia || 'Ninguna');
+        formData.append('antecedentes', patientData.antecedentes || 'Ninguno');
         formData.append('notas', patientData.notas || '');
         formData.append('clinicalRecord', patientData.historiaClinicaFile); // el archivo
 
@@ -90,7 +88,8 @@ export class PatientService {
             obraSocial: patientData.obraSocial || '',
             numeroAfiliado: patientData.numeroAfiliado || '',
             fechaNacimiento: patientData.fechaNacimiento || '',
-            alergias: patientData.alergias || 'Ninguna',
+            alergias: patientData.alergias || patientData.alergia || 'Ninguna',
+            antecedentes: patientData.antecedentes || 'Ninguno',
             notas: patientData.notas || '',
           })
         };

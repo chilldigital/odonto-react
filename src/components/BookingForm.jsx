@@ -47,6 +47,7 @@ export default function BookingForm({ onSuccess, hideHeader = false, hideInterna
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [patientNotice, setPatientNotice] = useState('');
 
   // Exponer submit del form al contenedor para el botón del footer del modal
   const formRef = React.useRef(null);
@@ -71,17 +72,19 @@ export default function BookingForm({ onSuccess, hideHeader = false, hideInterna
   const checkPatient = async (dni) => {
     if (dni.length < 8) {
       setPatientFound(false);
+      setPatientNotice('');
       return;
     }
     
     setCheckingPatient(true);
     setError('');
+    setPatientNotice('');
     
     try {
       const response = await apiFetch(`${N8N_ENDPOINTS.CHECK_PATIENT}?dni=${dni}`);
       
       if (!response.ok) {
-        throw new Error('Error al consultar paciente');
+        throw new Error('No se encontró el paciente');
       }
       
       const data = await response.json();
@@ -99,6 +102,7 @@ export default function BookingForm({ onSuccess, hideHeader = false, hideInterna
           antecedentes: data.patient.antecedentes || data.patient.background || 'Ninguno'
         }));
         setPatientFound(true);
+        setPatientNotice('');
       } else {
         // Limpiar datos si no se encuentra el paciente
         setFormData(prev => ({
@@ -112,9 +116,10 @@ export default function BookingForm({ onSuccess, hideHeader = false, hideInterna
           antecedentes: ''
         }));
         setPatientFound(false);
+        setPatientNotice('No se encontró el paciente');
       }
     } catch (err) {
-      setError('No se encontró el paciente.');
+      setPatientNotice('No se encontró el paciente');
       setPatientFound(false);
     } finally {
       setCheckingPatient(false);
@@ -179,6 +184,7 @@ export default function BookingForm({ onSuccess, hideHeader = false, hideInterna
     setFormData(prev => ({ ...prev, [field]: value }));
     
     if (field === 'dni') {
+      setPatientNotice('');
       checkPatient(value);
     }
     
@@ -323,6 +329,11 @@ export default function BookingForm({ onSuccess, hideHeader = false, hideInterna
       {/* Form */}
       <form ref={formRef} onSubmit={handleSubmit} className="p-6 space-y-6">
         <button ref={hiddenSubmitRef} type="submit" className="hidden" aria-hidden="true" tabIndex={-1} />
+        {patientNotice && (
+          <div className="bg-gray-50 border border-gray-200 text-gray-800 px-4 py-3 rounded-lg text-sm">
+            {patientNotice}
+          </div>
+        )}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
             <AlertCircle size={20} />

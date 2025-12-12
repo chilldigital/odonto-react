@@ -253,7 +253,7 @@ export default function TurnosView({ onOpenBooking, onViewTurno }) {
                                 {fmtTime.format(start)}
                                 {end && !isNaN(end.getTime()) ? ` - ${fmtTime.format(end)}` : ''}
                               </span>
-                              <span className="text-gray-400">•</span>
+                              <span className="text-gray-400">-</span>
                               <span className="font-medium text-gray-900">{title}</span>
                             </div>
                             {who && (

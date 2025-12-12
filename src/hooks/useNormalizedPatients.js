@@ -8,7 +8,9 @@ function parseFechaToMs(raw) {
   if (typeof raw === 'string') {
     const iso = Date.parse(raw);
     if (!Number.isNaN(iso)) return iso;
-    const m = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+    const m = raw.match(
+      /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
+    );
     if (m) {
       const d = parseInt(m[1], 10);
       const mo = parseInt(m[2], 10) - 1;
@@ -35,30 +37,34 @@ export function useNormalizedPatients(patients) {
     };
 
     return list
-      .map((p) => ({
-        id: p?.id || p?._id || String(Math.random()),
-        nombre: getField(p, ['nombre', 'name'], 'Sin nombre'),
-        dni: getField(p, ['dni', 'DNI', 'Dni']),
-        telefono: getField(p, ['telefono', 'phone', 'Telefono']),
-        obraSocial: getField(p, ['obraSocial', 'obra_social', 'ObraSocial', 'Obra Social']),
-        numeroAfiliado: getField(p, ['numeroAfiliado', 'Numero Afiliado', 'Número Afiliado', 'numero_afiliado']),
-        email: getField(p, ['email', 'Email', 'correo']),
-        direccion: getField(p, ['direccion', 'Direccion', 'address']),
-        fechaNacimiento: getField(p, ['fechaNacimiento', 'Fecha Nacimiento', 'birthDate']),
-        estado: getField(p, ['estado', 'Estado', 'status'], 'Activo'),
-        ultimaVisita: getField(p, ['ultimaVisita', 'Ultima Visita', 'lastVisit'], '-'),
-        proximoTurno: getField(p, ['proximoTurno', 'Proximo Turno', 'nextAppointment'], '-'),
-        alergia: getField(p, ['alergia', 'Alergia', 'allergies'], 'Ninguna'),
-        antecedentes: getField(p, ['antecedentes', 'Antecedentes', 'medicalHistory'], 'Ninguno'),
-        notas: getField(p, ['notas', 'Notas', 'notes']),
-        historiaClinicaUrl: getField(p, ['historiaClinicaUrl', 'historia_clinica', 'Historia Clinica']),
-        fechaCreacion: getField(
-          p,
-          ['fechaCreacion', 'Fecha Creacion', 'createdAt', 'createdTime'],
-          new Date().toISOString().slice(0, 10)
-        ),
-        _createdAt: parseFechaToMs(p?._createdAt || p?.createdTime || p?.fechaCreacion || Date.now()),
-      }))
+      .map((p) => {
+        const dniValue = getField(p, ['dni', 'DNI', 'Dni']);
+
+        return {
+          id: p?.id || p?._id || dniValue || '',
+          nombre: getField(p, ['nombre', 'name'], 'Sin nombre'),
+          dni: dniValue,
+          telefono: getField(p, ['telefono', 'phone', 'Telefono']),
+          obraSocial: getField(p, ['obraSocial', 'obra_social', 'ObraSocial', 'Obra Social']),
+          numeroAfiliado: getField(p, ['numeroAfiliado', 'Numero Afiliado', 'Nσero Afiliado', 'numero_afiliado']),
+          email: getField(p, ['email', 'Email', 'correo']),
+          direccion: getField(p, ['direccion', 'Direccion', 'address']),
+          fechaNacimiento: getField(p, ['fechaNacimiento', 'Fecha Nacimiento', 'birthDate']),
+          estado: getField(p, ['estado', 'Estado', 'status'], 'Activo'),
+          ultimaVisita: getField(p, ['ultimaVisita', 'Ultima Visita', 'lastVisit'], '-'),
+          proximoTurno: getField(p, ['proximoTurno', 'Proximo Turno', 'nextAppointment'], '-'),
+          alergias: getField(p, ['alergias', 'alergia', 'Alergia', 'allergies'], 'Ninguna'),
+          antecedentes: getField(p, ['antecedentes', 'Antecedentes', 'medicalHistory'], 'Ninguno'),
+          notas: getField(p, ['notas', 'Notas', 'notes']),
+          historiaClinicaUrl: getField(p, ['historiaClinicaUrl', 'historia_clinica', 'Historia Clinica']),
+          fechaCreacion: getField(
+            p,
+            ['fechaCreacion', 'Fecha Creacion', 'createdAt', 'createdTime'],
+            new Date().toISOString().slice(0, 10)
+          ),
+          _createdAt: parseFechaToMs(p?._createdAt || p?.createdTime || p?.fechaCreacion || Date.now()),
+        };
+      })
       .sort((a, b) => b._createdAt - a._createdAt);
   }, [patients]);
 
@@ -66,4 +72,3 @@ export function useNormalizedPatients(patients) {
 
   return { normalizedPatients, latestPatients };
 }
-

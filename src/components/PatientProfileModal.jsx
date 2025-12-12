@@ -49,7 +49,7 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
   const email = getField(patient, ['email', 'Email', 'correo', 'mail'], '-');
   const obraSocial = getField(patient, ['obraSocial', 'obra_social', 'ObraSocial', 'Obra Social']);
   const numeroAfiliado = getField(patient, ['numeroAfiliado', 'Numero Afiliado', 'Número Afiliado', 'numero_afiliado']);
-  const alergia = getField(patient, ['alergia', 'alergias', 'Alergias', 'allergies'], 'Ninguna');
+  const alergias = getField(patient, ['alergias', 'alergia', 'Alergias', 'allergies'], 'Ninguna');
   const antecedentes = getField(patient, ['antecedentes', 'Antecedentes', 'medical_history'], 'Ninguno');
   const historiaClinicaUrl = getField(patient, ['historiaClinicaUrl', 'historia_clinica', 'Historia Clinica'], 'Sin archivo');
   const estado = getField(patient, ['estado', 'Estado', 'status'], 'Activo');
@@ -241,12 +241,12 @@ export default function PatientProfileModal({ open, patient, onClose, onEdit, on
             value={numeroAfiliado} 
           />
 
-          {/* 6. Alergia */}
+          {/* 6. Alergias */}
           <InfoRow 
             icon={AlertTriangle} 
-            label="Alergia" 
-            value={alergia} 
-            className={alergia !== 'Ninguna' && alergia !== '-' ? 'text-red-600 font-medium' : ''}
+            label="Alergias" 
+            value={alergias} 
+            className={alergias !== 'Ninguna' && alergias !== '-' ? 'text-red-600 font-medium' : ''}
           />
 
           {/* 7. Antecedentes */}
