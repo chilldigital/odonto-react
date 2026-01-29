@@ -23,7 +23,24 @@ export const apiFetch = async (url, options = {}) => {
     headers['X-API-Key'] = apiKey;
   }
 
-  return fetch(url, { ...options, headers });
+  const response = await fetch(url, { ...options, headers });
+
+  // Avisar globalmente cuando un webhook muta datos (POST/PUT/PATCH/DELETE)
+  const isMutation = response.ok && method !== 'GET';
+  const looksLikeWebhook = typeof url === 'string' && url.includes('/webhook/');
+  if (typeof window !== 'undefined' && isMutation && looksLikeWebhook) {
+    try {
+      window.dispatchEvent(
+        new CustomEvent('webhook:mutated', {
+          detail: { url, method, status: response.status }
+        })
+      );
+    } catch {
+      // Silenciar en entornos donde window no esté disponible
+    }
+  }
+
+  return response;
 };
 
 export default { apiFetch };
