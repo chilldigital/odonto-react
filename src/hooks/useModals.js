@@ -151,6 +151,8 @@ export function ModalsProvider({ children, addPatient, updatePatient, refreshTur
       }
       setShowEditModal(false);
       setSelectedPatient(null);
+      // Recargar la app para reflejar los datos actualizados en todas las vistas
+      try { window.location.reload(); } catch {}
     } catch (err) {
       alert(`Error: ${err.message || 'No se pudo actualizar el paciente'}`);
     }
@@ -167,6 +169,8 @@ export function ModalsProvider({ children, addPatient, updatePatient, refreshTur
         _createdAt: typeof patientData?._createdAt === 'number' ? patientData._createdAt : Date.now(),
       };
       const created = (Array.isArray(res) ? res[0]?.patient : res?.patient) || res || createdFallback;
+      // Recargar para asegurar que las tablas/listas tomen el nuevo paciente
+      try { window.location.reload(); } catch {}
       return created;
     } catch (err) {
       alert(`Error: ${err.message || 'No se pudo crear el paciente'}`);

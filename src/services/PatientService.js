@@ -110,8 +110,19 @@ export class PatientService {
         dni: responseData.dni || responseData.DNI || patientData.dni,
         telefono: responseData.telefono || responseData.phone || patientData.telefono,
         email: responseData.email || patientData.email,
-        obraSocial: responseData.obraSocial || responseData.insurance || patientData.obraSocial,
-        numeroAfiliado: responseData.numeroAfiliado || responseData.affiliateNumber || patientData.numeroAfiliado,
+        obraSocial:
+          responseData.obraSocial ||
+          responseData.obra_social ||
+          responseData['Obra Social'] ||
+          responseData.insurance ||
+          patientData.obraSocial,
+        numeroAfiliado:
+          responseData.numeroAfiliado ||
+          responseData.numeroafiliado ||
+          responseData.numero_afiliado ||
+          responseData['Numero Afiliado'] ||
+          responseData.affiliateNumber ||
+          patientData.numeroAfiliado,
         fechaNacimiento: responseData.fechaNacimiento || responseData.birthDate || patientData.fechaNacimiento,
         alergias: responseData.alergias || responseData.allergies || patientData.alergias || 'Ninguna',
         notas: responseData.notas || responseData.notes || patientData.notas,

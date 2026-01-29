@@ -46,7 +46,7 @@ export function useNormalizedPatients(patients) {
           dni: dniValue,
           telefono: getField(p, ['telefono', 'phone', 'Telefono']),
           obraSocial: getField(p, ['obraSocial', 'obra_social', 'ObraSocial', 'Obra Social']),
-          numeroAfiliado: getField(p, ['numeroAfiliado', 'Numero Afiliado', 'Nσero Afiliado', 'numero_afiliado']),
+          numeroAfiliado: getField(p, ['numeroAfiliado', 'Numero Afiliado', 'Nσero Afiliado', 'numero_afiliado', 'numeroafiliado']),
           email: getField(p, ['email', 'Email', 'correo']),
           direccion: getField(p, ['direccion', 'Direccion', 'address']),
           fechaNacimiento: getField(p, ['fechaNacimiento', 'Fecha Nacimiento', 'birthDate']),
