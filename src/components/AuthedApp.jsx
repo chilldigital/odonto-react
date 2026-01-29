@@ -101,7 +101,12 @@ export default function AuthedApp({ onLogout, justLoggedIn, onConsumedLogin }) {
   const headerTitle = titleByPath(location.pathname);
 
   return (
-    <ModalsProvider addPatient={addPatient} updatePatient={updatePatient} refreshTurnos={refreshTurnos}>
+    <ModalsProvider
+      addPatient={addPatient}
+      updatePatient={updatePatient}
+      refreshTurnos={refreshTurnos}
+      refreshPatients={refreshPatients}
+    >
       <div className="flex h-screen bg-gray-100">
         <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onLogout={onLogout} />
 

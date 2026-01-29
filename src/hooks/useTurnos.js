@@ -105,5 +105,20 @@ export function useTurnos(fromDate = null, toDate = null) {
     };
   }, [fetchTurnos, fromDate, toDate]);
 
+  // Refrescar automáticamente después de cualquier webhook mutador relacionado a turnos/calendario
+  useEffect(() => {
+    const handleWebhookMutation = (e) => {
+      const method = String(e?.detail?.method || '').toUpperCase();
+      if (method === 'GET') return;
+      const url = String(e?.detail?.url || '');
+      const touchesTurnos = !url || /appointment|turno|calendar/i.test(url);
+      if (!touchesTurnos) return;
+      fetchTurnos(fromDate, toDate);
+    };
+
+    window.addEventListener('webhook:mutated', handleWebhookMutation);
+    return () => window.removeEventListener('webhook:mutated', handleWebhookMutation);
+  }, [fetchTurnos, fromDate, toDate]);
+
   return { turnos, loading, error, refreshTurnos, fetchTurnos };
 }

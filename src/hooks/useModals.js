@@ -4,7 +4,7 @@ import { apiFetch } from '../utils/api';
 
 const ModalsContext = createContext(null);
 
-export function ModalsProvider({ children, addPatient, updatePatient, refreshTurnos }) {
+export function ModalsProvider({ children, addPatient, updatePatient, refreshTurnos, refreshPatients }) {
   // Pacientes
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -149,14 +149,15 @@ export function ModalsProvider({ children, addPatient, updatePatient, refreshTur
       if (typeof updatePatient === 'function') {
         await updatePatient(updatedPatientData);
       }
+      if (typeof refreshPatients === 'function') {
+        refreshPatients();
+      }
       setShowEditModal(false);
       setSelectedPatient(null);
-      // Recargar la app para reflejar los datos actualizados en todas las vistas
-      try { window.location.reload(); } catch {}
     } catch (err) {
       alert(`Error: ${err.message || 'No se pudo actualizar el paciente'}`);
     }
-  }, [updatePatient]);
+  }, [updatePatient, refreshPatients]);
 
   const onCreatedPatient = useCallback(async (patientData) => {
     try {
@@ -169,14 +170,15 @@ export function ModalsProvider({ children, addPatient, updatePatient, refreshTur
         _createdAt: typeof patientData?._createdAt === 'number' ? patientData._createdAt : Date.now(),
       };
       const created = (Array.isArray(res) ? res[0]?.patient : res?.patient) || res || createdFallback;
-      // Recargar para asegurar que las tablas/listas tomen el nuevo paciente
-      try { window.location.reload(); } catch {}
+      if (typeof refreshPatients === 'function') {
+        refreshPatients();
+      }
       return created;
     } catch (err) {
       alert(`Error: ${err.message || 'No se pudo crear el paciente'}`);
       throw err;
     }
-  }, [addPatient]);
+  }, [addPatient, refreshPatients]);
 
   const value = useMemo(() => ({
     // Paciente state
@@ -242,6 +244,7 @@ export function ModalsProvider({ children, addPatient, updatePatient, refreshTur
     onBookingSuccess,
     onTurnoSaved,
     onTurnoDeleted,
+    refreshPatients,
   ]);
 
   return (

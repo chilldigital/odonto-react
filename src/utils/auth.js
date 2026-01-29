@@ -91,6 +91,7 @@ export const getAuthHeaders = (additionalHeaders = {}) => {
 // Función fetch segura con manejo automático de tokens
 export const secureApiCall = async (url, options = {}) => {
   const token = getAuthToken();
+  const method = (options.method || 'GET').toUpperCase();
 
   // En desarrollo, permitir llamadas sin token si es temp_token
   if (!token && process.env.NODE_ENV !== 'development') {
@@ -115,6 +116,21 @@ export const secureApiCall = async (url, options = {}) => {
         window.location.href = '/login';
       }
       throw new AuthError('Token expirado');
+    }
+
+    // Emitir evento global para mantener datos sincronizados tras webhooks mutadores
+    const isMutation = response.ok && method !== 'GET';
+    const looksLikeWebhook = typeof url === 'string' && url.includes('/webhook/');
+    if (typeof window !== 'undefined' && isMutation && looksLikeWebhook) {
+      try {
+        window.dispatchEvent(
+          new CustomEvent('webhook:mutated', {
+            detail: { url, method, status: response.status }
+          })
+        );
+      } catch {
+        // No-op en entornos sin window
+      }
     }
 
     return response;

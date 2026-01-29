@@ -137,6 +137,20 @@ export function usePatients() {
     loadPatients();
   }, [loadPatients]);
 
+  // Refrescar automáticamente cuando un webhook mutador de pacientes finaliza
+  useEffect(() => {
+    const handleWebhookMutation = (e) => {
+      const method = String(e?.detail?.method || '').toUpperCase();
+      if (method === 'GET') return;
+      const url = String(e?.detail?.url || '');
+      const touchesPatients = !url || /patient/i.test(url);
+      if (!touchesPatients) return;
+      loadPatients();
+    };
+    window.addEventListener('webhook:mutated', handleWebhookMutation);
+    return () => window.removeEventListener('webhook:mutated', handleWebhookMutation);
+  }, [loadPatients]);
+
   return {
     patients,
     loading,
