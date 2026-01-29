@@ -90,16 +90,31 @@ export default function BookingForm({ onSuccess, hideHeader = false, hideInterna
       const data = await response.json();
       
       if (data.found && data.patient) {
+        const p = data.patient || {};
+        const obraSocial =
+          p.obraSocial ||
+          p.obra_social ||
+          p['Obra Social'] ||
+          p.insurance ||
+          '';
+        const numeroAfiliado =
+          p.numeroAfiliado ||
+          p.numeroafiliado ||
+          p.numero_afiliado ||
+          p['Numero Afiliado'] ||
+          p.affiliateNumber ||
+          '';
+
         // Autocompletar datos del paciente encontrado
         setFormData(prev => ({
           ...prev,
-          nombre: data.patient.nombre || data.patient.name || '',
-          telefono: data.patient.telefono || data.patient.phone || '',
-          email: data.patient.email || '',
-          obraSocial: data.patient.obraSocial || data.patient.insurance || '',
-          numeroAfiliado: data.patient.numeroAfiliado || data.patient.affiliateNumber || '',
-          alergias: data.patient.alergias || data.patient.allergies || 'Ninguna',
-          antecedentes: data.patient.antecedentes || data.patient.background || 'Ninguno'
+          nombre: p.nombre || p.name || '',
+          telefono: p.telefono || p.phone || '',
+          email: p.email || '',
+          obraSocial,
+          numeroAfiliado,
+          alergias: p.alergias || p.allergies || 'Ninguna',
+          antecedentes: p.antecedentes || p.background || 'Ninguno'
         }));
         setPatientFound(true);
         setPatientNotice('');
