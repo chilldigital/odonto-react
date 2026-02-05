@@ -37,18 +37,21 @@ export default function EditPatientModal({ open, patient, onClose, onSaved, onBa
 
   useEffect(() => {
     if (open && patient) {
+      // Helper para manejar arrays de N8N
+      const getValue = (val) => Array.isArray(val) ? val[0] || '' : val || '';
+      
       setForm({
-        nombre: patient?.nombre || '',
-        dni: patient?.dni || '',
-        telefono: patient?.telefono || '',
-        email: patient?.email || '',
-        obraSocial: patient?.obraSocial || '',
-        numeroAfiliado: patient?.numeroAfiliado || '',
-        alergias: patient?.alergias || patient?.alergia || '',
-        antecedentes: patient?.antecedentes || '',
-        historiaClinica: patient?.historiaClinica || '',
-        estado: patient?.estado || 'Activo',
-        notas: patient?.notas || ''
+        nombre: getValue(patient?.nombre),
+        dni: getValue(patient?.dni),
+        telefono: getValue(patient?.telefono),
+        email: getValue(patient?.email),
+        obraSocial: getValue(patient?.obraSocial),
+        numeroAfiliado: getValue(patient?.numeroAfiliado),
+        alergias: getValue(patient?.alergias || patient?.alergia),
+        antecedentes: getValue(patient?.antecedentes),
+        historiaClinica: getValue(patient?.historiaClinica),
+        estado: getValue(patient?.estado) || 'Activo',
+        notas: getValue(patient?.notas)
       });
       setHistoriaClinicaFile(null);
       setError('');
