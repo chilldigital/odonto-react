@@ -159,19 +159,38 @@ export class PatientService {
       
       
       const formData = new FormData();
+      const appended = new Set();
+
+      // Normaliza arrays (vienen así desde n8n) a su primer valor
+      const normalizeValue = (value) => {
+        if (value == null) return '';
+        if (Array.isArray(value)) return value[0] ?? '';
+        return value;
+      };
+
+      // Evita duplicar campos (dni/id) que generan arrays en n8n
+      const appendOnce = (key, value) => {
+        if (appended.has(key)) return;
+        const normalized = normalizeValue(value);
+        if (normalized === '' || normalized === undefined) return;
+        // Si es archivo, adjuntarlo tal cual; si no, enviarlo como string
+        const isBlob = typeof Blob !== 'undefined' && normalized instanceof Blob;
+        formData.append(key, isBlob ? normalized : String(normalized));
+        appended.add(key);
+      };
+
       // Identificador: usar DNI o id si existe
-      if (patientData.dni) formData.append('dni', patientData.dni);
-      else if (patientData.id || patientData._id) formData.append('id', patientData.id || patientData._id);
+      if (patientData.dni) appendOnce('dni', patientData.dni);
+      else if (patientData.id || patientData._id) appendOnce('id', patientData.id || patientData._id);
       
-      // Agregar todos los campos del formulario
+      // Agregar todos los campos del formulario (sin duplicar dni/id ni el archivo)
       Object.entries(patientData).forEach(([key, value]) => {
-        if (key !== 'historiaClinicaFile' && key !== 'fechaNacimiento' && value != null) {
-          formData.append(key, String(value));
-        }
+        if (key === 'historiaClinicaFile' || key === 'fechaNacimiento') return;
+        appendOnce(key, value);
       });
       
-      // Agregar el archivo
-      formData.append('historiaClinica', patientData.historiaClinicaFile);
+      // Agregar el archivo con el nombre esperado por n8n
+      appendOnce('historiaClinica', patientData.historiaClinicaFile);
 
       requestOptions = {
         method: 'POST',
@@ -183,6 +202,12 @@ export class PatientService {
       
       
       const sanitized = { ...patientData };
+      // Normalizar arrays a strings para evitar que n8n reciba listas
+      Object.entries(sanitized).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          sanitized[key] = value[0] ?? '';
+        }
+      });
       delete sanitized.fechaNacimiento;
 
       requestOptions = {
