@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Calendar, Clock, User, CreditCard, Phone, AlertCircle, CheckCircle, Loader, X, ArrowLeft } from 'lucide-react';
 import { N8N_ENDPOINTS } from '../config/n8n';
 import { apiFetch } from '../utils/api';
@@ -138,15 +138,27 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
     }
   };
 
-  // Obtener horarios disponibles
-  const getAvailableSlots = async (fecha, tipoTurno) => {
+  // Obtener horarios disponibles (ignorando el turno actual para liberarlo)
+  const getAvailableSlots = useCallback(async (fecha, tipoTurno, excludeId) => {
     if (!fecha || !tipoTurno) return;
+
     setLoadingAvailability(true);
+
     try {
       const appointmentType = APPOINTMENT_TYPES.find(t => t.id === tipoTurno);
-      const response = await apiFetch(`${N8N_ENDPOINTS.GET_AVAILABILITY}?fecha=${fecha}&duration=${appointmentType?.duration || 30}&excludeId=${formData.id}`);
+
+      const params = new URLSearchParams({
+        fecha,
+        duration: String(appointmentType?.duration || 30),
+      });
+
+      const effectiveExclude = excludeId || formData.id;
+      if (effectiveExclude) params.append('excludeId', effectiveExclude);
+
+      const response = await apiFetch(`${N8N_ENDPOINTS.GET_AVAILABILITY}?${params.toString()}`);
       const data = await response.json();
       const raw = Array.isArray(data?.availableSlots) ? data.availableSlots : [];
+
       // Normalizar a 24h, quitar duplicados y ordenar
       const unique = Array.from(new Set(raw.map(to24h))).sort();
       setAvailableSlots(unique);
@@ -155,7 +167,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
     } finally {
       setLoadingAvailability(false);
     }
-  };
+  }, [formData.id]);
 
   // Fechas disponibles (próximas 2 semanas; incluir seleccionada)
   const availableDates = useMemo(() => {
@@ -181,12 +193,19 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
     if (field === 'fecha' || field === 'tipoTurno') {
       const next = { ...formData, [field]: value, hora: '' };
       setFormData(next);
-      if (next.fecha && next.tipoTurno) getAvailableSlots(next.fecha, next.tipoTurno);
+      // El efecto de abajo disparará la consulta con el turno actual excluido
       return;
     }
     setFormData(prev => ({ ...prev, [field]: value }));
     if (field === 'dni') checkPatient(value);
   };
+
+  // Prefetch de horarios apenas se abre el modal o cambia fecha/tipo
+  useEffect(() => {
+    if (!open) return;
+    if (!formData.fecha || !formData.tipoTurno) return;
+    getAvailableSlots(formData.fecha, formData.tipoTurno, formData.id);
+  }, [open, formData.fecha, formData.tipoTurno, formData.id, getAvailableSlots]);
 
   const handleSave = async (e) => {
     e.preventDefault();
