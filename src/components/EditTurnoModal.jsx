@@ -33,12 +33,8 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [error, setError] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
-  const [freeingSlot, setFreeingSlot] = useState(false);
-  const [freedSlot, setFreedSlot] = useState(false);
-  const [freeError, setFreeError] = useState('');
-  const [freedTurnoId, setFreedTurnoId] = useState(null);
 
-  // Obtener horarios disponibles (ignorando el turno actual para liberarlo)
+  // Obtener horarios disponibles (puede excluir el turno actual)
   const getAvailableSlots = useCallback(async (fecha, tipoTurno, excludeId) => {
     if (!fecha || !tipoTurno) return;
 
@@ -72,51 +68,9 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
     }
   }, [formData.id]);
 
-  // Liberar el turno actual (cancelarlo) para que su horario quede disponible
-  const freeCurrentSlot = useCallback(async (id, fecha, tipoTurno) => {
-    if (!id || freeingSlot || freedTurnoId === id) return;
-    setFreeingSlot(true);
-    setFreeError('');
-    try {
-      const response = await apiFetch(N8N_ENDPOINTS.DELETE_APPOINTMENT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id,
-          reason: 'Liberado para reprogramar',
-          canceledAt: new Date().toISOString(),
-        }),
-      });
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.message || `No se pudo liberar el turno (HTTP ${response.status})`);
-      }
-      setFreedSlot(true);
-      setFreedTurnoId(id);
-      // Notificar globalmente
-      try {
-        window.dispatchEvent(new CustomEvent('turnos:deleted', { detail: { id } }));
-        window.dispatchEvent(new CustomEvent('turnos:refresh'));
-      } catch {}
-      // Traer disponibilidad ya sin el turno
-      if (fecha && tipoTurno) {
-        getAvailableSlots(fecha, tipoTurno, id);
-      }
-    } catch (err) {
-      setFreeError(err.message || 'No se pudo liberar el turno actual.');
-    } finally {
-      setFreeingSlot(false);
-    }
-  }, [freeingSlot, freedTurnoId, getAvailableSlots]);
-
   // Inicializar formulario cuando se abre el modal
   useEffect(() => {
     if (open && turno) {
-      // reset estado de liberación para este turno
-      setFreeingSlot(false);
-      setFreeError('');
-      setFreedSlot(false);
-      setFreedTurnoId(null);
 
       const startDate = turno.start || turno.startTime;
       let fecha = '', hora = '';
@@ -183,14 +137,12 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
         checkPatient(dniInicial);
       }
 
-      // Liberar inmediatamente el turno actual para que aparezca como disponible
-      if (idTurno) {
-        freeCurrentSlot(idTurno, fecha, tipoTurno);
-      } else if (fecha && tipoTurno) {
-        getAvailableSlots(fecha, tipoTurno);
+      // Solo consultar disponibilidad excluyendo este turno (no lo cancelamos automáticamente)
+      if (fecha && tipoTurno) {
+        getAvailableSlots(fecha, tipoTurno, idTurno);
       }
     }
-  }, [open, turno, freeCurrentSlot, getAvailableSlots]);
+  }, [open, turno, getAvailableSlots]);
 
   // Consultar paciente por DNI
   const checkPatient = async (dni) => {
