@@ -246,8 +246,8 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
         updatedAt: new Date().toISOString(),
       };
 
-      const endpoint = freedSlot ? N8N_ENDPOINTS.CREATE_APPOINTMENT : N8N_ENDPOINTS.UPDATE_APPOINTMENT;
-      const payload = freedSlot ? basePayload : { ...basePayload, id: formData.id };
+      const endpoint = N8N_ENDPOINTS.UPDATE_APPOINTMENT;
+      const payload = { ...basePayload, id: formData.id };
 
       const response = await apiFetch(endpoint, {
         method: 'POST',
@@ -338,22 +338,6 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
           {/* Body */}
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] bg-white">
             <form id="edit-turno-form" onSubmit={handleSave} className="p-6 space-y-6 pb-8">
-              {freeingSlot && (
-                <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg text-sm">
-                  Liberando el turno actual para mostrar horarios disponibles...
-                </div>
-              )}
-              {freeError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                  {freeError}
-                </div>
-              )}
-              {freedSlot && !freeError && (
-                <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-lg text-sm">
-                  El turno original fue liberado. Elegí un nuevo horario y guardá para reprogramar.
-                </div>
-              )}
-
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
                   <AlertCircle size={20} />
@@ -575,7 +559,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
             <button
               type="submit"
               form="edit-turno-form"
-              disabled={!isFormValid() || loading || deleting || freeingSlot}
+              disabled={!isFormValid() || loading || deleting}
               className="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-3 px-6 rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
               {loading ? (
