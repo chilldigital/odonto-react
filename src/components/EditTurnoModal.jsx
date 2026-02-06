@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Calendar, Clock, User, CreditCard, Phone, AlertCircle, CheckCircle, Loader, X, ArrowLeft } from 'lucide-react';
 import { N8N_ENDPOINTS } from '../config/n8n';
 import { apiFetch } from '../utils/api';
@@ -33,74 +33,10 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [error, setError] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
-
-  // Inicializar formulario cuando se abre el modal
-  useEffect(() => {
-    if (open && turno) {
-      const startDate = turno.start || turno.startTime;
-      let fecha = '', hora = '';
-      if (startDate) {
-        const d = new Date(startDate);
-        if (!isNaN(d.getTime())) {
-          fecha = d.toISOString().split('T')[0];
-          hora = d.toTimeString().slice(0, 5);
-        }
-      }
-
-      const tipoTurno = (APPOINTMENT_TYPES.find(type =>
-        (turno.title || '').toLowerCase().includes(type.name.toLowerCase()) ||
-        (turno.summary || '').toLowerCase().includes(type.name.toLowerCase()) ||
-        (turno.tipoTurnoNombre || '').toLowerCase().includes(type.name.toLowerCase())
-      ) || {}).id || '';
-
-      // Obtener DNI: usar campo explícito o parsear de la descripción
-      let dniInicial = turno.patientDni || turno.dni || '';
-      if (!dniInicial) {
-        const text = String(turno.description || '');
-        const m1 = text.match(/dni\s*[:\-]?\s*([0-9\.\s]+)/i);
-        if (m1 && m1[1]) {
-          dniInicial = String(m1[1]).replace(/\D/g, '');
-        } else {
-          const m2 = text.match(/(^|\D)(\d{7,9})(?!\d)/);
-          if (m2 && m2[2]) dniInicial = m2[2];
-        }
-      }
-      // Normalizar a solo dígitos
-      dniInicial = String(dniInicial || '').replace(/\D/g, '');
-
-      // Nombre desde descripción como fallback
-      const nombreDesdeDescripcion = (() => {
-        const text = String(turno.description || '');
-        const m = text.match(/Paciente\s*[:\-]?\s*(.+?)(?=\s*(DNI|Dni|dni)\b|$)/);
-        return m && m[1] ? m[1].trim() : '';
-      })();
-
-      setFormData({
-        id: turno.id || turno.eventId || turno._id || '',
-        dni: dniInicial,
-        nombre: turno.patientName || turno.paciente || nombreDesdeDescripcion || '',
-        telefono: turno.patientPhone || turno.telefono || '',
-        email: turno.patientEmail || turno.email || '',
-        obraSocial: turno.obraSocial || '',
-        numeroAfiliado: turno.numeroAfiliado || '',
-        alergias: turno.alergias || '',
-        antecedentes: turno.antecedentes || '',
-        tipoTurno,
-        fecha,
-        hora,
-        notas: turno.description || turno.notas || ''
-      });
-
-      // Aún no sabemos si existe en base; esperar resultado de checkPatient
-      setPatientFound(false);
-      setError('');
-
-      // Traer datos del paciente automáticamente al abrir si hay DNI
-      if (dniInicial) {
-        checkPatient(dniInicial);
-      }
-    }
-  }, [open, turno]);
+  const [freeingSlot, setFreeingSlot] = useState(false);
+  const [freedSlot, setFreedSlot] = useState(false);
+  const [freeError, setFreeError] = useState('');
+  const [freedTurnoId, setFreedTurnoId] = useState(null);
 
   // Consultar paciente por DNI
   const checkPatient = async (dni) => {
@@ -157,6 +93,124 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
     }
   };
 
+  // Liberar el turno actual (cancelarlo) para que su horario quede disponible
+  const freeCurrentSlot = useCallback(async (id, fecha, tipoTurno) => {
+    if (!id || freeingSlot || freedTurnoId === id) return;
+    setFreeingSlot(true);
+    setFreeError('');
+    try {
+      const response = await apiFetch(N8N_ENDPOINTS.DELETE_APPOINTMENT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id,
+          reason: 'Liberado para reprogramar',
+          canceledAt: new Date().toISOString(),
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || `No se pudo liberar el turno (HTTP ${response.status})`);
+      }
+      setFreedSlot(true);
+      setFreedTurnoId(id);
+      // Notificar globalmente
+      try {
+        window.dispatchEvent(new CustomEvent('turnos:deleted', { detail: { id } }));
+        window.dispatchEvent(new CustomEvent('turnos:refresh'));
+      } catch {}
+      // Traer disponibilidad ya sin el turno
+      if (fecha && tipoTurno) {
+        getAvailableSlots(fecha, tipoTurno);
+      }
+    } catch (err) {
+      setFreeError(err.message || 'No se pudo liberar el turno actual.');
+    } finally {
+      setFreeingSlot(false);
+    }
+  }, [freeingSlot, freedTurnoId, getAvailableSlots]);
+
+  // Inicializar formulario cuando se abre el modal
+  useEffect(() => {
+    if (open && turno) {
+      // reset estado de liberación para este turno
+      setFreeingSlot(false);
+      setFreeError('');
+      setFreedSlot(false);
+      setFreedTurnoId(null);
+
+      const startDate = turno.start || turno.startTime;
+      let fecha = '', hora = '';
+      if (startDate) {
+        const d = new Date(startDate);
+        if (!isNaN(d.getTime())) {
+          fecha = d.toISOString().split('T')[0];
+          hora = d.toTimeString().slice(0, 5);
+        }
+      }
+
+      const tipoTurno = (APPOINTMENT_TYPES.find(type =>
+        (turno.title || '').toLowerCase().includes(type.name.toLowerCase()) ||
+        (turno.summary || '').toLowerCase().includes(type.name.toLowerCase()) ||
+        (turno.tipoTurnoNombre || '').toLowerCase().includes(type.name.toLowerCase())
+      ) || {}).id || '';
+
+      // Obtener DNI: usar campo explícito o parsear de la descripción
+      let dniInicial = turno.patientDni || turno.dni || '';
+      if (!dniInicial) {
+        const text = String(turno.description || '');
+        const m1 = text.match(/dni\s*[:\-]?\s*([0-9\.\s]+)/i);
+        if (m1 && m1[1]) {
+          dniInicial = String(m1[1]).replace(/\D/g, '');
+        } else {
+          const m2 = text.match(/(^|\D)(\d{7,9})(?!\d)/);
+          if (m2 && m2[2]) dniInicial = m2[2];
+        }
+      }
+      // Normalizar a solo dígitos
+      dniInicial = String(dniInicial || '').replace(/\D/g, '');
+
+      // Nombre desde descripción como fallback
+      const nombreDesdeDescripcion = (() => {
+        const text = String(turno.description || '');
+        const m = text.match(/Paciente\s*[:\-]?\s*(.+?)(?=\s*(DNI|Dni|dni)\b|$)/);
+        return m && m[1] ? m[1].trim() : '';
+      })();
+
+      const idTurno = turno.id || turno.eventId || turno._id || '';
+
+      setFormData({
+        id: idTurno,
+        dni: dniInicial,
+        nombre: turno.patientName || turno.paciente || nombreDesdeDescripcion || '',
+        telefono: turno.patientPhone || turno.telefono || '',
+        email: turno.patientEmail || turno.email || '',
+        obraSocial: turno.obraSocial || '',
+        numeroAfiliado: turno.numeroAfiliado || '',
+        alergias: turno.alergias || '',
+        antecedentes: turno.antecedentes || '',
+        tipoTurno,
+        fecha,
+        hora,
+        notas: turno.description || turno.notas || ''
+      });
+
+      // Aún no sabemos si existe en base; esperar resultado de checkPatient
+      setPatientFound(false);
+      setError('');
+
+      // Traer datos del paciente automáticamente al abrir si hay DNI
+      if (dniInicial) {
+        checkPatient(dniInicial);
+      }
+
+      // Liberar inmediatamente el turno actual para que aparezca como disponible
+      if (idTurno) {
+        freeCurrentSlot(idTurno, fecha, tipoTurno);
+      }
+    }
+  }, [open, turno, freeCurrentSlot]);
+
   // Fechas disponibles (próximas 2 semanas; incluir seleccionada)
   const availableDates = useMemo(() => {
     const dates = [];
@@ -195,35 +249,40 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
     try {
       const appointmentType = APPOINTMENT_TYPES.find(t => t.id === formData.tipoTurno);
       const appointmentISO = combineDateTimeToISO(formData.fecha, formData.hora, 'America/Argentina/Buenos_Aires');
-      const response = await apiFetch(N8N_ENDPOINTS.UPDATE_APPOINTMENT, {
+      const basePayload = {
+        dni: formData.dni,
+        nombre: formData.nombre,
+        telefono: formData.telefono,
+        email: formData.email,
+        obraSocial: formData.obraSocial,
+        numeroAfiliado: formData.numeroAfiliado,
+        alergias: formData.alergias || 'Ninguna',
+        antecedentes: formData.antecedentes || 'Ninguno',
+        tipoTurno: formData.tipoTurno,
+        tipoTurnoNombre: appointmentType?.name || 'Consulta',
+        duracion: appointmentType?.duration || 30,
+        fechaHora: appointmentISO,
+        timezone: 'America/Argentina/Buenos_Aires',
+        notas: formData.notas,
+        isNewPatient: !patientFound,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const endpoint = freedSlot ? N8N_ENDPOINTS.CREATE_APPOINTMENT : N8N_ENDPOINTS.UPDATE_APPOINTMENT;
+      const payload = freedSlot ? basePayload : { ...basePayload, id: formData.id };
+
+      const response = await apiFetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: formData.id,
-          dni: formData.dni,
-          nombre: formData.nombre,
-          telefono: formData.telefono,
-          email: formData.email,
-          obraSocial: formData.obraSocial,
-          numeroAfiliado: formData.numeroAfiliado,
-          alergias: formData.alergias || 'Ninguna',
-          antecedentes: formData.antecedentes || 'Ninguno',
-          tipoTurno: formData.tipoTurno,
-          tipoTurnoNombre: appointmentType?.name || 'Consulta',
-          duracion: appointmentType?.duration || 30,
-          fechaHora: appointmentISO,
-          timezone: 'America/Argentina/Buenos_Aires',
-          notas: formData.notas,
-          isNewPatient: !patientFound,
-          updatedAt: new Date().toISOString(),
-        }),
+        body: JSON.stringify(payload),
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al actualizar el turno');
+        throw new Error(errorData.message || 'Error al guardar el turno');
       }
       const result = await response.json().catch(() => ({}));
-      if (onSaved) onSaved(result.appointment || formData);
+      const saved = result.appointment || result || payload;
+      if (onSaved) onSaved(saved);
       onClose();
     } catch (err) {
       setError(err.message || 'Error al actualizar el turno. Intenta nuevamente.');
@@ -301,6 +360,22 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
           {/* Body */}
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] bg-white">
             <form id="edit-turno-form" onSubmit={handleSave} className="p-6 space-y-6 pb-8">
+              {freeingSlot && (
+                <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg text-sm">
+                  Liberando el turno actual para mostrar horarios disponibles...
+                </div>
+              )}
+              {freeError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                  {freeError}
+                </div>
+              )}
+              {freedSlot && !freeError && (
+                <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-lg text-sm">
+                  El turno original fue liberado. Elegí un nuevo horario y guardá para reprogramar.
+                </div>
+              )}
+
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
                   <AlertCircle size={20} />
@@ -522,7 +597,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
             <button
               type="submit"
               form="edit-turno-form"
-              disabled={!isFormValid() || loading || deleting}
+              disabled={!isFormValid() || loading || deleting || freeingSlot}
               className="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-3 px-6 rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
               {loading ? (
