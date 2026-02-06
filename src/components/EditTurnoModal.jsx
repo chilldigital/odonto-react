@@ -75,8 +75,10 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
         return m && m[1] ? m[1].trim() : '';
       })();
 
+      const idTurno = turno.id || turno.eventId || turno._id || '';
+
       setFormData({
-        id: turno.id || turno.eventId || turno._id || '',
+        id: idTurno,
         dni: dniInicial,
         nombre: turno.patientName || turno.paciente || nombreDesdeDescripcion || '',
         telefono: turno.patientPhone || turno.telefono || '',
@@ -99,8 +101,13 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
       if (dniInicial) {
         checkPatient(dniInicial);
       }
+
+      // Prefetch de disponibilidad liberando el turno actual
+      if (fecha && tipoTurno) {
+        getAvailableSlots(fecha, tipoTurno, idTurno);
+      }
     }
-  }, [open, turno]);
+  }, [open, turno, getAvailableSlots]);
 
   // Consultar paciente por DNI
   const checkPatient = async (dni) => {
@@ -153,7 +160,10 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
       });
 
       const effectiveExclude = excludeId || formData.id;
-      if (effectiveExclude) params.append('excludeId', effectiveExclude);
+      if (effectiveExclude) {
+        const keys = ['excludeId', 'excludeEventId', 'exclude', 'ignoreId', 'ignoreEventId'];
+        keys.forEach((k) => params.append(k, effectiveExclude));
+      }
 
       const response = await apiFetch(`${N8N_ENDPOINTS.GET_AVAILABILITY}?${params.toString()}`);
       const data = await response.json();
@@ -193,7 +203,9 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
     if (field === 'fecha' || field === 'tipoTurno') {
       const next = { ...formData, [field]: value, hora: '' };
       setFormData(next);
-      // El efecto de abajo disparará la consulta con el turno actual excluido
+      if (next.fecha && next.tipoTurno) {
+        getAvailableSlots(next.fecha, next.tipoTurno, next.id || formData.id);
+      }
       return;
     }
     setFormData(prev => ({ ...prev, [field]: value }));
