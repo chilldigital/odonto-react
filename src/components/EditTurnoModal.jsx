@@ -33,10 +33,88 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [error, setError] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
+<<<<<<< HEAD
   const [freeingSlot, setFreeingSlot] = useState(false);
   const [freedSlot, setFreedSlot] = useState(false);
   const [freeError, setFreeError] = useState('');
   const [freedTurnoId, setFreedTurnoId] = useState(null);
+=======
+
+  // Inicializar formulario cuando se abre el modal
+  useEffect(() => {
+    if (open && turno) {
+      const startDate = turno.start || turno.startTime;
+      let fecha = '', hora = '';
+      if (startDate) {
+        const d = new Date(startDate);
+        if (!isNaN(d.getTime())) {
+          fecha = d.toISOString().split('T')[0];
+          hora = d.toTimeString().slice(0, 5);
+        }
+      }
+
+      const tipoTurno = (APPOINTMENT_TYPES.find(type =>
+        (turno.title || '').toLowerCase().includes(type.name.toLowerCase()) ||
+        (turno.summary || '').toLowerCase().includes(type.name.toLowerCase()) ||
+        (turno.tipoTurnoNombre || '').toLowerCase().includes(type.name.toLowerCase())
+      ) || {}).id || '';
+
+      // Obtener DNI: usar campo explícito o parsear de la descripción
+      let dniInicial = turno.patientDni || turno.dni || '';
+      if (!dniInicial) {
+        const text = String(turno.description || '');
+        const m1 = text.match(/dni\s*[:\-]?\s*([0-9\.\s]+)/i);
+        if (m1 && m1[1]) {
+          dniInicial = String(m1[1]).replace(/\D/g, '');
+        } else {
+          const m2 = text.match(/(^|\D)(\d{7,9})(?!\d)/);
+          if (m2 && m2[2]) dniInicial = m2[2];
+        }
+      }
+      // Normalizar a solo dígitos
+      dniInicial = String(dniInicial || '').replace(/\D/g, '');
+
+      // Nombre desde descripción como fallback
+      const nombreDesdeDescripcion = (() => {
+        const text = String(turno.description || '');
+        const m = text.match(/Paciente\s*[:\-]?\s*(.+?)(?=\s*(DNI|Dni|dni)\b|$)/);
+        return m && m[1] ? m[1].trim() : '';
+      })();
+
+      const idTurno = turno.id || turno.eventId || turno._id || '';
+
+      setFormData({
+        id: idTurno,
+        dni: dniInicial,
+        nombre: turno.patientName || turno.paciente || nombreDesdeDescripcion || '',
+        telefono: turno.patientPhone || turno.telefono || '',
+        email: turno.patientEmail || turno.email || '',
+        obraSocial: turno.obraSocial || '',
+        numeroAfiliado: turno.numeroAfiliado || '',
+        alergias: turno.alergias || '',
+        antecedentes: turno.antecedentes || '',
+        tipoTurno,
+        fecha,
+        hora,
+        notas: turno.description || turno.notas || ''
+      });
+
+      // Aún no sabemos si existe en base; esperar resultado de checkPatient
+      setPatientFound(false);
+      setError('');
+
+      // Traer datos del paciente automáticamente al abrir si hay DNI
+      if (dniInicial) {
+        checkPatient(dniInicial);
+      }
+
+      // Prefetch de disponibilidad liberando el turno actual
+      if (fecha && tipoTurno) {
+        getAvailableSlots(fecha, tipoTurno, idTurno);
+      }
+    }
+  }, [open, turno, getAvailableSlots]);
+>>>>>>> cb75f085ab8bb281d761c6f99bfe1fa6d3cf39c1
 
   // Consultar paciente por DNI
   const checkPatient = async (dni) => {
@@ -74,15 +152,30 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
     }
   };
 
-  // Obtener horarios disponibles
-  const getAvailableSlots = async (fecha, tipoTurno) => {
+  // Obtener horarios disponibles (ignorando el turno actual para liberarlo)
+  const getAvailableSlots = useCallback(async (fecha, tipoTurno, excludeId) => {
     if (!fecha || !tipoTurno) return;
+
     setLoadingAvailability(true);
+
     try {
       const appointmentType = APPOINTMENT_TYPES.find(t => t.id === tipoTurno);
-      const response = await apiFetch(`${N8N_ENDPOINTS.GET_AVAILABILITY}?fecha=${fecha}&duration=${appointmentType?.duration || 30}&excludeId=${formData.id}`);
+
+      const params = new URLSearchParams({
+        fecha,
+        duration: String(appointmentType?.duration || 30),
+      });
+
+      const effectiveExclude = excludeId || formData.id;
+      if (effectiveExclude) {
+        const keys = ['excludeId', 'excludeEventId', 'exclude', 'ignoreId', 'ignoreEventId'];
+        keys.forEach((k) => params.append(k, effectiveExclude));
+      }
+
+      const response = await apiFetch(`${N8N_ENDPOINTS.GET_AVAILABILITY}?${params.toString()}`);
       const data = await response.json();
       const raw = Array.isArray(data?.availableSlots) ? data.availableSlots : [];
+
       // Normalizar a 24h, quitar duplicados y ordenar
       const unique = Array.from(new Set(raw.map(to24h))).sort();
       setAvailableSlots(unique);
@@ -91,7 +184,7 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
     } finally {
       setLoadingAvailability(false);
     }
-  };
+  }, [formData.id]);
 
   // Liberar el turno actual (cancelarlo) para que su horario quede disponible
   const freeCurrentSlot = useCallback(async (id, fecha, tipoTurno) => {
@@ -235,12 +328,21 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
     if (field === 'fecha' || field === 'tipoTurno') {
       const next = { ...formData, [field]: value, hora: '' };
       setFormData(next);
-      if (next.fecha && next.tipoTurno) getAvailableSlots(next.fecha, next.tipoTurno);
+      if (next.fecha && next.tipoTurno) {
+        getAvailableSlots(next.fecha, next.tipoTurno, next.id || formData.id);
+      }
       return;
     }
     setFormData(prev => ({ ...prev, [field]: value }));
     if (field === 'dni') checkPatient(value);
   };
+
+  // Prefetch de horarios apenas se abre el modal o cambia fecha/tipo
+  useEffect(() => {
+    if (!open) return;
+    if (!formData.fecha || !formData.tipoTurno) return;
+    getAvailableSlots(formData.fecha, formData.tipoTurno, formData.id);
+  }, [open, formData.fecha, formData.tipoTurno, formData.id, getAvailableSlots]);
 
   const handleSave = async (e) => {
     e.preventDefault();
