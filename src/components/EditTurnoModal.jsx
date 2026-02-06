@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Calendar, Clock, User, CreditCard, Phone, AlertCircle, CheckCircle, Loader, X, ArrowLeft } from 'lucide-react';
 import { N8N_ENDPOINTS } from '../config/n8n';
 import { apiFetch } from '../utils/api';
@@ -33,6 +33,9 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [error, setError] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // Evita borrar el turno más de una vez al abrir el modal
+  const freedRef = useRef(false);
 
   // Obtener horarios disponibles (puede excluir el turno actual)
   const getAvailableSlots = useCallback(async (fecha, tipoTurno, excludeId) => {
@@ -137,12 +140,40 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
         checkPatient(dniInicial);
       }
 
-      // Solo consultar disponibilidad excluyendo este turno (no lo cancelamos automáticamente)
-      if (fecha && tipoTurno) {
-        getAvailableSlots(fecha, tipoTurno, idTurno);
-      }
+      // Liberar turno actual solo una vez para que el horario quede disponible
+      const freeAndLoad = async () => {
+        if (idTurno && !freedRef.current) {
+          try {
+            await apiFetch(N8N_ENDPOINTS.DELETE_APPOINTMENT, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: idTurno,
+                reason: 'Liberado para reprogramar',
+                canceledAt: new Date().toISOString(),
+              }),
+            });
+            freedRef.current = true;
+          } catch (e) {
+            // Si falla el delete, continuamos pero avisamos
+            console.error('No se pudo liberar el turno antes de reprogramar:', e);
+          }
+        }
+        if (fecha && tipoTurno) {
+          getAvailableSlots(fecha, tipoTurno, idTurno);
+        }
+      };
+
+      freeAndLoad();
     }
   }, [open, turno, getAvailableSlots]);
+
+  // Reset flag al cerrar el modal
+  useEffect(() => {
+    if (!open) {
+      freedRef.current = false;
+    }
+  }, [open]);
 
   // Consultar paciente por DNI
   const checkPatient = async (dni) => {
@@ -246,8 +277,13 @@ export default function EditTurnoModal({ open, turno, onClose, onSaved, onDelete
         updatedAt: new Date().toISOString(),
       };
 
-      const endpoint = N8N_ENDPOINTS.UPDATE_APPOINTMENT;
-      const payload = { ...basePayload, id: formData.id };
+      const endpoint = freedRef.current
+        ? N8N_ENDPOINTS.CREATE_APPOINTMENT
+        : N8N_ENDPOINTS.UPDATE_APPOINTMENT;
+
+      const payload = freedRef.current
+        ? basePayload
+        : { ...basePayload, id: formData.id };
 
       const response = await apiFetch(endpoint, {
         method: 'POST',
